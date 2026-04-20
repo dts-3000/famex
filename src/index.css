@@ -1,0 +1,64 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --bg2: #111111;
+  --bg3: #1a1a1a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0ede8;
+  --text2: #888880;
+  --text3: #555550;
+  --green: #00d084;
+  --green-bg: rgba(0,208,132,0.08);
+  --green-border: rgba(0,208,132,0.2);
+  --red: #ff4455;
+  --red-bg: rgba(255,68,85,0.08);
+  --red-border: rgba(255,68,85,0.2);
+  --gold: #f5c842;
+  --gold-bg: rgba(245,200,66,0.08);
+  --blue: #4a9eff;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input { font-family: var(--font-mono); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flash-green {
+  0%, 100% { background: transparent; }
+  50% { background: var(--green-bg); }
+}
+
+@keyframes flash-red {
+  0%, 100% { background: transparent; }
+  50% { background: var(--red-bg); }
+}
+
+.flash-green { animation: flash-green 0.6s ease; }
+.flash-red { animation: flash-red 0.6s ease; }
