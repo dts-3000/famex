@@ -47,7 +47,7 @@ async function fetchMentions(id) {
   const q = SEARCH_TERMS[id]
   if (!q) return null
   try {
-    const res = await fetch(`/api/news?q=${encodeURIComponent(q)}`)
+    const res = await fetch(`/api/news.cjs?q=${encodeURIComponent(q)}`)
     if (!res.ok) return null
     const data = await res.json()
     return { id, totalMentions: data.totalMentions || 0, articles: data.recentArticles || [] }
