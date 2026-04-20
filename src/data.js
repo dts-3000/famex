@@ -51,12 +51,12 @@ export const NEWS_TEMPLATES = [
   { tmpl:(n)=>`${n} rumoured for major new role`,                buzzImpact:+14, dir:1,  pub:'The Guardian' },
   { tmpl:(n)=>`${n} goes viral after candid interview`,          buzzImpact:+20, dir:1,  pub:'Financial Times' },
   { tmpl:(n)=>`${n} announces world tour — tickets sell out`,    buzzImpact:+24, dir:1,  pub:'NME' },
-  { tmpl:(n)=>`${n} faces backlash over controversial comments`, buzzImpact:-22, dir:-1, pub:'Daily Mirror' },
-  { tmpl:(n)=>`${n} cancels appearance citing personal reasons`, buzzImpact:-18, dir:-1, pub:'BBC News' },
-  { tmpl:(n)=>`${n} embroiled in public dispute`,                buzzImpact:-20, dir:-1, pub:'The Sun' },
-  { tmpl:(n)=>`Critics pan ${n}'s latest project`,               buzzImpact:-16, dir:-1, pub:'The Telegraph' },
-  { tmpl:(n)=>`${n} goes quiet — fans concerned`,                buzzImpact:-14, dir:-1, pub:'Reuters' },
-  { tmpl:(n)=>`${n} seen leaving controversial event`,           buzzImpact:-18, dir:-1, pub:'Daily Mail' },
+  { tmpl:(n)=>`${n} faces backlash over controversial comments`, buzzImpact:-12, dir:-1, pub:'Daily Mirror' },
+  { tmpl:(n)=>`${n} cancels appearance citing personal reasons`, buzzImpact:-8, dir:-1, pub:'BBC News' },
+  { tmpl:(n)=>`${n} embroiled in public dispute`,                buzzImpact:-10, dir:-1, pub:'The Sun' },
+  { tmpl:(n)=>`Critics pan ${n}'s latest project`,               buzzImpact:-6, dir:-1, pub:'The Telegraph' },
+  { tmpl:(n)=>`${n} goes quiet — fans concerned`,                buzzImpact:-4, dir:-1, pub:'Reuters' },
+  { tmpl:(n)=>`${n} seen leaving controversial event`,           buzzImpact:-8, dir:-1, pub:'Daily Mail' },
 ]
 
 export const SECTORS = ['All', ...new Set(CELEBRITIES.map(c => c.sector))]
