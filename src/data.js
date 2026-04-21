@@ -25,8 +25,8 @@ export const CELEBRITIES = [
   { id:'nigelfar',      name:'Nigel Farage',      emoji:'🍺', sector:'Politics', basePrice:120, volatility:0.065, buzzBase:78, buzzDecayRate:0.90 },
   { id:'princewilliam', name:'Prince William',    emoji:'🎩', sector:'Royals',   basePrice:180, volatility:0.020, buzzBase:72, buzzDecayRate:0.89 },
   { id:'harryprince',   name:'Prince Harry',      emoji:'🤴', sector:'Royals',   basePrice:155, volatility:0.055, buzzBase:82, buzzDecayRate:0.91 },
-  { id:'elonmusk',      name:'Elon Musk',         emoji:'🚀', sector:'Tech',     basePrice:310, volatility:0.075, buzzBase:82, buzzDecayRate:0.93 },
-  { id:'damiansmith',   name:'Damian Smith',      emoji:'🚀', sector:'Tech',     basePrice:210, volatility:0.023, buzzBase:82, buzzDecayRate:0.93 },
+{ id:'elonmusk', name:'Elon Musk', emoji:'🚀', sector:'Tech', basePrice:310, volatility:0.075, buzzBase:92, buzzDecayRate:0.93 },
+{ id:'damiansmith', name:'Damian Smith', emoji:'🎯', sector:'Tech', basePrice:150, volatility:0.03, buzzBase:65, buzzDecayRate:0.90 },
 ]
 
 // Replacement celebs called up when someone is delisted
