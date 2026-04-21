@@ -182,11 +182,7 @@ export default function App() {
                 </svg>
                 <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{countdown}s</span>
               </div>
-              <button onClick={() => setShowAdmin(true)} style={{
-                width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border)',
-                background: 'var(--bg2)', color: 'var(--text2)', fontSize: 16,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }} title="Admin Panel">⚙</button>
+
             </div>
           </div>
         </div>
@@ -224,6 +220,21 @@ export default function App() {
       </main>
 
       <Toast message={toast.message} type={toast.type} onDone={() => setToast({ message: '', type: '' })} />
+
+      {/* Fixed admin button — always visible bottom right */}
+      <button onClick={() => setShowAdmin(true)} style={{
+        position: 'fixed', bottom: 24, right: 24,
+        width: 44, height: 44, borderRadius: '50%',
+        border: '1px solid var(--border2)',
+        background: 'var(--bg2)', color: 'var(--text2)',
+        fontSize: 20, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+        zIndex: 99, transition: 'all 0.2s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--gold)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg2)'; e.currentTarget.style.color = 'var(--text2)' }}
+      title="Admin Panel">⚙</button>
 
       {showAdmin && (
         <AdminPanel
