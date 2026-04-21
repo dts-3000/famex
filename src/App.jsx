@@ -221,20 +221,18 @@ export default function App() {
 
       <Toast message={toast.message} type={toast.type} onDone={() => setToast({ message: '', type: '' })} />
 
-      {/* Fixed admin button — always visible bottom right */}
+      {/* Fixed admin button — bottom right, hard to miss */}
       <button onClick={() => setShowAdmin(true)} style={{
-        position: 'fixed', bottom: 24, right: 24,
-        width: 44, height: 44, borderRadius: '50%',
-        border: '1px solid var(--border2)',
-        background: 'var(--bg2)', color: 'var(--text2)',
-        fontSize: 20, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        zIndex: 99, transition: 'all 0.2s',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.color = 'var(--gold)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg2)'; e.currentTarget.style.color = 'var(--text2)' }}
-      title="Admin Panel">⚙</button>
+        position: 'fixed', bottom: 32, right: 32,
+        padding: '12px 20px', borderRadius: 12,
+        border: '2px solid #f5c842',
+        background: '#f5c842', color: '#000',
+        fontSize: 14, fontWeight: 800,
+        fontFamily: 'var(--font-display)',
+        cursor: 'pointer', zIndex: 999,
+        boxShadow: '0 4px 24px rgba(245,200,66,0.4)',
+        letterSpacing: '0.02em',
+      }}>⚙ ADMIN</button>
 
       {showAdmin && (
         <AdminPanel
