@@ -60,8 +60,8 @@ export const NEWS_TEMPLATES = [
 ]
 
 export const SECTORS = ['All', ...new Set(CELEBRITIES.map(c => c.sector))]
-export const UPDATE_INTERVAL = 60
-export const STARTING_CASH = 1000
+export const UPDATE_INTERVAL = 30
+export const STARTING_CASH = 10000
 
 const TRADE_IMPACT = 0.0015
 
