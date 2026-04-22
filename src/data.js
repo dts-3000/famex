@@ -27,16 +27,18 @@ export const CELEBRITIES = [
   { id:'harryprince',   name:'Prince Harry',      emoji:'🤴', sector:'Royals',   basePrice:15.50, volatility:0.055, buzzBase:82, buzzDecayRate:0.91 },
   { id:'elonmusk',      name:'Elon Musk',         emoji:'🚀', sector:'Tech',     basePrice:31.00, volatility:0.075, buzzBase:92, buzzDecayRate:0.93 },
   { id:'damiansmith',   name:'Damian Smith',      emoji:'🎯', sector:'Tech',     basePrice:15.00, volatility:0.030, buzzBase:65, buzzDecayRate:0.90 },
+  { id:'brandonpark',    name:'Brandon Park',     emoji:'💫', sector:'Music',    basePrice:18.00, volatility:0.028, buzzBase:72, buzzDecayRate:0.89 },
+  { id:'melgibson',     name:'Mel Gibson',        emoji:'🌸', sector:'Film & TV',basePrice:21.00, volatility:0.038, buzzBase:80, buzzDecayRate:0.91 },
+  { id:'messi',       name:'Lionel Messi',       emoji:'⚽', sector:'Sport', basePrice:10.00, volatility:0.055, buzzBase:70, buzzDecayRate:0.89 },
+  { id:'charleskoen', name:'King Charles',      emoji:'👑', sector:'Royals',   basePrice:16.50, volatility:0.022, buzzBase:68, buzzDecayRate:0.88 },
+  { id:'timcook',     name:'Tim Cook',          emoji:'🍎', sector:'Tech',     basePrice:16.00, volatility:0.035, buzzBase:65, buzzDecayRate:0.88 },
+  { id:'sabcarp',     name:'Sabrina Carpenter', emoji:'🎀', sector:'Music',    basePrice:19.50, volatility:0.042, buzzBase:82, buzzDecayRate:0.91 },
 ]
 
 // Replacement celebs called up when someone is delisted
 export const BENCH = [
   { id:'kyliemin',    name:'Kylie Minogue',     emoji:'💫', sector:'Music',    basePrice:18.00, volatility:0.028, buzzBase:72, buzzDecayRate:0.89 },
   { id:'zendaya',     name:'Zendaya',           emoji:'🌸', sector:'Film & TV',basePrice:21.00, volatility:0.038, buzzBase:80, buzzDecayRate:0.91 },
-  { id:'rishi',       name:'Rishi Sunak',       emoji:'🇬🇧', sector:'Politics', basePrice:10.00, volatility:0.055, buzzBase:70, buzzDecayRate:0.89 },
-  { id:'charleskoen', name:'King Charles',      emoji:'👑', sector:'Royals',   basePrice:16.50, volatility:0.022, buzzBase:68, buzzDecayRate:0.88 },
-  { id:'timcook',     name:'Tim Cook',          emoji:'🍎', sector:'Tech',     basePrice:16.00, volatility:0.035, buzzBase:65, buzzDecayRate:0.88 },
-  { id:'sabcarp',     name:'Sabrina Carpenter', emoji:'🎀', sector:'Music',    basePrice:19.50, volatility:0.042, buzzBase:82, buzzDecayRate:0.91 },
   { id:'oscarisaac',  name:'Oscar Isaac',       emoji:'🎬', sector:'Film & TV',basePrice:16.00, volatility:0.030, buzzBase:65, buzzDecayRate:0.88 },
   { id:'matildaman',  name:'Matilda Mann',      emoji:'🎵', sector:'Music',    basePrice:12.00, volatility:0.040, buzzBase:60, buzzDecayRate:0.88 },
 ]
