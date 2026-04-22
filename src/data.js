@@ -208,7 +208,7 @@ export function getAllCelebs(state) {
 }
 
 export function fmt(n) {
-  return '£' + Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  return '$' + Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
 export function fmtChange(n) {
