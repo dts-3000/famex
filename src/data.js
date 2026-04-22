@@ -117,6 +117,9 @@ export const NEWS_TEMPLATES = [
   { tmpl:(n)=>`${n} seen leaving controversial event`,           buzzImpact:-12,  dir:-1, pub:'Daily Mail' },
   { tmpl:(n)=>`${n} writes scandalous tell-all book`,            buzzImpact:-16,  dir:-1, pub:'Herald Sun' },
   { tmpl:(n)=>`${n} secretly recorded in expose`,                buzzImpact:-18,  dir:-1, pub:'Daily Mail' },
+  { tmpl:(n)=>`${n} wins humanitarian award`,                    buzzImpact:+18,  dir:1, pub:'Daily Mail' },
+  { tmpl:(n)=>`${n} donates to local charity`,                   buzzImpact:+18,  dir:1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} signs new marketing deal`,                   buzzImpact:+14,  dir:1, pub:'New York Times' },
 ]
 
 export const SECTORS = ['All', ...new Set(CELEBRITIES.map(c => c.sector))]
