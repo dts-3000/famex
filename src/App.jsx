@@ -115,7 +115,7 @@ export default function App() {
       delistWarnings: { ...prev.delistWarnings, [celeb.id]: 0 },
       holdings: { ...prev.holdings, [celeb.id]: { qty: 0, avgCost: 0 } },
       customCelebs: { ...(prev.customCelebs || {}), [celeb.id]: celeb },
-      news: [{ headline: `🆕 ${celeb.name} has joined Celebrity Exchange!`, pub: 'Celebrity Exchange', time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), dir: 1, id: Date.now() }, ...prev.news],
+      news: [{ headline: `🆕 ${celeb.name} has joined Fame Exchange!`, pub: 'Fame Exchange', time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), dir: 1, id: Date.now() }, ...prev.news],
     }))
   }, [])
 
@@ -126,7 +126,7 @@ export default function App() {
         ...prev,
         active: prev.active.filter(a => a !== id),
         prices: { ...prev.prices, [id]: 0 },
-        news: [{ headline: `⚠️ ${celeb?.name || id} delisted by admin`, pub: 'Celebrity Exchange', time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), dir: -1, id: Date.now() }, ...prev.news],
+        news: [{ headline: `⚠️ ${celeb?.name || id} delisted by admin`, pub: 'Fame Exchange', time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), dir: -1, id: Date.now() }, ...prev.news],
       }
     })
   }, [])
@@ -194,7 +194,7 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', flexWrap: 'wrap', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                Celebrity<span style={{ color: 'var(--gold)' }}>Exchange</span>
+                Fame<span style={{ color: 'var(--gold)' }}>X</span>
               </span>
               <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>BETA</span>
             </div>
