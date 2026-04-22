@@ -14,7 +14,7 @@ export default function Ticker({ prices, history, active }) {
     }}>
       <span style={{
         display: 'inline-block',
-        animation: 'ticker 70s linear infinite',
+        animation: 'ticker 250s linear infinite',
         fontFamily: 'var(--font-mono)', fontSize: '12px', letterSpacing: '0.02em',
       }}>
         {[...celebs, ...celebs].map((c, i) => {
