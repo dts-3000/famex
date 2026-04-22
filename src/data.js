@@ -114,8 +114,8 @@ export const NEWS_TEMPLATES = [
   { tmpl:(n)=>`${n} embroiled in public dispute`,                buzzImpact:-10, dir:-1, pub:'The Sun' },
   { tmpl:(n)=>`Critics pan ${n}'s latest project`,               buzzImpact:-16,  dir:-1, pub:'The Telegraph' },
   { tmpl:(n)=>`${n} goes quiet — fans concerned`,                buzzImpact:-14,  dir:-1, pub:'Reuters' },
-  { tmpl:(n)=>`${n} seen leaving controversial event`,           buzzImpact:-18,  dir:-1, pub:'Daily Mail' },
-  { tmpl:(n)=>`${n} writes scandalous tell-all book`,            buzzImpact:-28,  dir:-1, pub:'Herald Sun' },
+  { tmpl:(n)=>`${n} seen leaving controversial event`,           buzzImpact:-12,  dir:-1, pub:'Daily Mail' },
+  { tmpl:(n)=>`${n} writes scandalous tell-all book`,            buzzImpact:-16,  dir:-1, pub:'Herald Sun' },
   { tmpl:(n)=>`${n} secretly recorded in expose`,                buzzImpact:-18,  dir:-1, pub:'Daily Mail' },
 ]
 
