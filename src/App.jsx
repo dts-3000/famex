@@ -16,14 +16,52 @@ const EVENT_IMPACTS = {
   comeback: { buzzDelta: +35, resetBase: true  },
 }
 
+const SAVE_KEY = 'famex_save'
+
+function loadSave() {
+  try {
+    const saved = localStorage.getItem(SAVE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      // Merge saved state with fresh init to catch any new celebs added to data.js
+      const fresh = initState()
+      return {
+        ...fresh,
+        ...parsed,
+        // Keep fresh prices/history/buzz for any new celebs not in save
+        prices:   { ...fresh.prices,   ...parsed.prices },
+        history:  { ...fresh.history,  ...parsed.history },
+        buzz:     { ...fresh.buzz,     ...parsed.buzz },
+        buzzPrev: { ...fresh.buzzPrev, ...parsed.buzzPrev },
+        holdings: { ...fresh.holdings, ...parsed.holdings },
+        delistWarnings: { ...fresh.delistWarnings, ...parsed.delistWarnings },
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load save:', e)
+  }
+  return initState()
+}
+
 export default function App() {
-  const [state, setState] = useState(() => initState())
+  const [state, setState] = useState(() => loadSave())
   const [tab, setTab] = useState('market')
   const [sector, setSector] = useState('All')
   const [countdown, setCountdown] = useState(UPDATE_INTERVAL)
   const [toast, setToast] = useState({ message: '', type: '' })
   const [showAdmin, setShowAdmin] = useState(false)
   const [customCelebDefs, setCustomCelebDefs] = useState({})
+  const [lastSaved, setLastSaved] = useState(null)
+
+  // Auto-save every 60s and on state change
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state))
+      setLastSaved(new Date())
+    } catch (e) {
+      console.warn('Could not save:', e)
+    }
+  }, [state])
 
   // Market tick every 60s
   useEffect(() => {
@@ -180,9 +218,24 @@ export default function App() {
                     style={{ transition: 'stroke-dashoffset 1s linear' }}
                   />
                 </svg>
-                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{countdown}s</span>
+                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{countdown}s</span>
               </div>
-
+              {lastSaved && (
+                <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
+                  💾 {lastSaved.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              <button onClick={() => {
+                if (confirm('Reset game? This will clear all your holdings and start fresh.')) {
+                  localStorage.removeItem(SAVE_KEY)
+                  setState(initState())
+                  showToast('Game reset — good luck!', 'buy')
+                }
+              }} style={{
+                padding: '5px 10px', borderRadius: 6, fontSize: 11,
+                border: '1px solid var(--border)', background: 'transparent',
+                color: 'var(--text3)', fontFamily: 'var(--font-mono)', cursor: 'pointer',
+              }}>↺ Reset</button>
             </div>
           </div>
         </div>
