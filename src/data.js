@@ -97,14 +97,14 @@ export const BENCH = [
 ]
 
 export const NEWS_TEMPLATES = [
-  { tmpl:(n)=>`${n} spotted at Glastonbury front row`,           buzzImpact:+18, dir:1,  pub:'The Guardian' },
+  { tmpl:(n)=>`${n} spotted at Glastonbury front row`,           buzzImpact:+38, dir:1,  pub:'The Guardian' },
   { tmpl:(n)=>`${n} breaks internet with surprise announcement`, buzzImpact:+25, dir:1,  pub:'BBC News' },
-  { tmpl:(n)=>`${n} trends worldwide on social media`,           buzzImpact:+20, dir:1,  pub:'Daily Mail' },
-  { tmpl:(n)=>`${n} wins prestigious award at ceremony`,         buzzImpact:+22, dir:1,  pub:'The Times' },
-  { tmpl:(n)=>`${n} new project breaks all records`,             buzzImpact:+18, dir:1,  pub:'Evening Standard' },
+  { tmpl:(n)=>`${n} trends worldwide on social media`,           buzzImpact:+30, dir:1,  pub:'Daily Mail' },
+  { tmpl:(n)=>`${n} wins prestigious award at ceremony`,         buzzImpact:+32, dir:1,  pub:'The Times' },
+  { tmpl:(n)=>`${n} new project breaks all records`,             buzzImpact:+38, dir:1,  pub:'Evening Standard' },
   { tmpl:(n)=>`${n} makes surprise comeback — fans ecstatic`,    buzzImpact:+28, dir:1,  pub:'BBC News' },
-  { tmpl:(n)=>`${n} rumoured for major new role`,                buzzImpact:+14, dir:1,  pub:'The Guardian' },
-  { tmpl:(n)=>`${n} goes viral after candid interview`,          buzzImpact:+20, dir:1,  pub:'Financial Times' },
+  { tmpl:(n)=>`${n} rumoured for major new role`,                buzzImpact:+34, dir:1,  pub:'The Guardian' },
+  { tmpl:(n)=>`${n} goes viral after candid interview`,          buzzImpact:+30, dir:1,  pub:'Financial Times' },
   { tmpl:(n)=>`${n} announces world tour — tickets sell out`,    buzzImpact:+24, dir:1,  pub:'NME' },
   { tmpl:(n)=>`${n} faces backlash over controversial comments`, buzzImpact:-12, dir:-1, pub:'Daily Mirror' },
   { tmpl:(n)=>`${n} cancels appearance citing personal reasons`, buzzImpact:-8,  dir:-1, pub:'BBC News' },
@@ -118,7 +118,7 @@ export const NEWS_TEMPLATES = [
   { tmpl:(n)=>`${n} donates to local charity`,                   buzzImpact:+18,  dir:1, pub:'The Sun' },
   { tmpl:(n)=>`${n} signs new marketing deal`,                   buzzImpact:+14,  dir:1, pub:'New York Times' },
   { tmpl:(n)=>`${n} signs lucrative new contract`,               buzzImpact:+18,  dir:1, pub:'TMZ' },
-  { tmpl:(n)=>`${n} denies extra-marital affair`,                buzzImpact:-14,  dir:1, pub:'The Mail' },
+  { tmpl:(n)=>`${n} denies extra-marital affair`,                buzzImpact:-18,  dir:1, pub:'The Mail' },
   { tmpl:(n)=>`${n} signs new marketing deal`,                   buzzImpact:+14,  dir:1, pub:'New York Times' },
   { tmpl:(n)=>`${n} spotted at celebrity rehab facility`,          buzzImpact:-18, dir:-1, pub:'The Sun' },
   { tmpl:(n)=>`${n} in explosive row with former friend`,          buzzImpact:-14, dir:-1, pub:'Daily Mirror' },
@@ -130,9 +130,9 @@ export const NEWS_TEMPLATES = [
   { tmpl:(n)=>`${n} drops out of charity event at last minute`,    buzzImpact:-14, dir:-1, pub:'Daily Mirror' },
   { tmpl:(n)=>`${n} labelled hypocrite after leaked messages`,     buzzImpact:-22, dir:-1, pub:'The Telegraph' },
   { tmpl:(n)=>`${n} hit with shock tax evasion allegations`,       buzzImpact:-24, dir:-1, pub:'Financial Times' },
-  { tmpl:(n)=>`${n} donates yearly salary to the homeless`,        buzzImpact:+18,  dir:1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} donates yearly salary to the homeless`,        buzzImpact:+38,  dir:1, pub:'The Sun' },
   { tmpl:(n)=>`${n} volunteers at Children's Hospital`,            buzzImpact:+28,  dir:1, pub:'The Sun' },
-  { tmpl:(n)=>`${n} wins defamation court case`,                   buzzImpact:+18,  dir:1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} wins defamation court case`,                   buzzImpact:+38,  dir:1, pub:'The Sun' },
   { tmpl:(n)=>`${n} enters Hall of Fame`,                          buzzImpact:+28,  dir:1, pub:'The Sun' },
 ]
 
