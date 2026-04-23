@@ -117,11 +117,28 @@ export const NEWS_TEMPLATES = [
   { tmpl:(n)=>`${n} wins humanitarian award`,                    buzzImpact:+18,  dir:1, pub:'Daily Mail' },
   { tmpl:(n)=>`${n} donates to local charity`,                   buzzImpact:+18,  dir:1, pub:'The Sun' },
   { tmpl:(n)=>`${n} signs new marketing deal`,                   buzzImpact:+14,  dir:1, pub:'New York Times' },
+  { tmpl:(n)=>`${n} signs lucrative new contract`,               buzzImpact:+18,  dir:1, pub:'TMZ' },
+  { tmpl:(n)=>`${n} denies extra-marital affair`,                buzzImpact:-14,  dir:1, pub:'The Mail' },
+  { tmpl:(n)=>`${n} signs new marketing deal`,                   buzzImpact:+14,  dir:1, pub:'New York Times' },
+  { tmpl:(n)=>`${n} spotted at celebrity rehab facility`,          buzzImpact:-18, dir:-1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} in explosive row with former friend`,          buzzImpact:-14, dir:-1, pub:'Daily Mirror' },
+  { tmpl:(n)=>`${n} cancels world tour with no explanation`,       buzzImpact:-20, dir:-1, pub:'BBC News' },
+  { tmpl:(n)=>`${n} slammed for out of touch comments`,            buzzImpact:-16, dir:-1, pub:'The Guardian' },
+  { tmpl:(n)=>`${n} involved in shock legal battle`,               buzzImpact:-18, dir:-1, pub:'The Times' },
+  { tmpl:(n)=>`${n} unfollows entire social media following`,      buzzImpact:-10, dir:-1, pub:'Daily Mail' },
+  { tmpl:(n)=>`${n} spotted looking unrecognisable in LA`,         buzzImpact:-12, dir:-1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} drops out of charity event at last minute`,    buzzImpact:-14, dir:-1, pub:'Daily Mirror' },
+  { tmpl:(n)=>`${n} labelled hypocrite after leaked messages`,     buzzImpact:-22, dir:-1, pub:'The Telegraph' },
+  { tmpl:(n)=>`${n} hit with shock tax evasion allegations`,       buzzImpact:-24, dir:-1, pub:'Financial Times' },
+  { tmpl:(n)=>`${n} donates yearly salary to the homeless`,        buzzImpact:+18,  dir:1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} volunteers at Children's Hospital`,            buzzImpact:+28,  dir:1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} wins defamation court case`,                   buzzImpact:+18,  dir:1, pub:'The Sun' },
+  { tmpl:(n)=>`${n} enters Hall of Fame`,                          buzzImpact:+28,  dir:1, pub:'The Sun' },
 ]
 
 export const SECTORS = ['All', ...new Set(CELEBRITIES.map(c => c.sector))]
-export const UPDATE_INTERVAL = 30
-export const STARTING_CASH = 10000
+export const UPDATE_INTERVAL = 45
+export const STARTING_CASH = 100000
 
 const TRADE_IMPACT = 0.0015
 
