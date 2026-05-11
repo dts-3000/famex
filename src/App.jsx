@@ -11,7 +11,8 @@ import TrophyCabinet from './components/TrophyCabinet.jsx'
 import BadgeUnlock from './components/BadgeUnlock.jsx'
 
 const SAVE_KEY = 'famex_save'
-const SCRAPE_INTERVAL = 2 * 60 * 60 * 1000 // 2 hours
+const SCRAPE_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
+const SCRAPE_INTERVAL_SECS = 24 * 60 * 60    // 24 hours in seconds
 
 const EVENT_IMPACTS = {
   boom:     { buzzDelta: +40, resetBase: false },
@@ -54,6 +55,7 @@ export default function App() {
   const [lastScraped, setLastScraped] = useState(null)
   const [scraping, setScraping] = useState(false)
   const [suggestions, setSuggestions] = useState([])
+  const [newsCountdown, setNewsCountdown] = useState(SCRAPE_INTERVAL_SECS)
 
   // Badge state
   const [earnedBadges, setEarnedBadges] = useState(() => {
@@ -158,20 +160,14 @@ export default function App() {
     return () => clearInterval(interval)
   }, [scrapeNews])
 
-  // Market tick
+  // Market tick + news countdown every second
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) {
-          setState(s => {
-            const next = tickMarket(s)
-            checkAndAwardBadges(next)
-            return next
-          })
-          return UPDATE_INTERVAL
-        }
+        if (prev <= 1) { setState(s => { const next = tickMarket(s); checkAndAwardBadges(next); return next }); return UPDATE_INTERVAL }
         return prev - 1
       })
+      setNewsCountdown(prev => prev <= 1 ? SCRAPE_INTERVAL_SECS : prev - 1)
     }, 1000)
     return () => clearInterval(interval)
   }, [checkAndAwardBadges])
@@ -335,16 +331,41 @@ export default function App() {
                   <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
                 </div>
               ))}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <svg width="28" height="28" viewBox="0 0 28 28">
+              {/* Price update countdown */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg width="24" height="24" viewBox="0 0 28 28">
                   <circle cx="14" cy="14" r={r} fill="none" stroke="var(--border)" strokeWidth="2.5"/>
-                  <circle cx="14" cy="14" r={r} fill="none" stroke="var(--blue)" strokeWidth="2.5"
-                    strokeDasharray={circ} strokeDashoffset={circ - offset}
+                  <circle cx="14" cy="14" r={r} fill="none" stroke="var(--green)" strokeWidth="2.5"
+                    strokeDasharray={circ} strokeDashoffset={circ - (circ * (countdown / UPDATE_INTERVAL))}
                     strokeLinecap="round" transform="rotate(-90 14 14)"
                     style={{ transition: 'stroke-dashoffset 1s linear' }}
                   />
                 </svg>
-                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{countdown}s</span>
+                <div>
+                  <div style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Price</div>
+                  <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{countdown}s</div>
+                </div>
+              </div>
+              {/* News scrape countdown */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg width="24" height="24" viewBox="0 0 28 28">
+                  <circle cx="14" cy="14" r={r} fill="none" stroke="var(--border)" strokeWidth="2.5"/>
+                  <circle cx="14" cy="14" r={r} fill="none" stroke="var(--blue)" strokeWidth="2.5"
+                    strokeDasharray={circ} strokeDashoffset={circ - (circ * (newsCountdown / SCRAPE_INTERVAL_SECS))}
+                    strokeLinecap="round" transform="rotate(-90 14 14)"
+                    style={{ transition: 'stroke-dashoffset 1s linear' }}
+                  />
+                </svg>
+                <div>
+                  <div style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>News</div>
+                  <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--blue)' }}>
+                    {newsCountdown >= 3600
+                      ? `${Math.floor(newsCountdown / 3600)}h ${Math.floor((newsCountdown % 3600) / 60)}m`
+                      : newsCountdown >= 60
+                      ? `${Math.floor(newsCountdown / 60)}m ${newsCountdown % 60}s`
+                      : `${newsCountdown}s`}
+                  </div>
+                </div>
               </div>
               {lastSaved && (
                 <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
