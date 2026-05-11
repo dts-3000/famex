@@ -1,11 +1,17 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, fmt } from './data.js'
+import { checkBadges } from './badges.js'
 import Ticker from './components/Ticker.jsx'
 import CelebCard from './components/CelebCard.jsx'
 import Portfolio from './components/Portfolio.jsx'
 import NewsFeed from './components/NewsFeed.jsx'
 import Toast from './components/Toast.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
+import TrophyCabinet from './components/TrophyCabinet.jsx'
+import BadgeUnlock from './components/BadgeUnlock.jsx'
+
+const SAVE_KEY = 'famex_save'
+const SCRAPE_INTERVAL = 2 * 60 * 60 * 1000 // 2 hours
 
 const EVENT_IMPACTS = {
   boom:     { buzzDelta: +40, resetBase: false },
@@ -16,30 +22,23 @@ const EVENT_IMPACTS = {
   comeback: { buzzDelta: +35, resetBase: true  },
 }
 
-const SAVE_KEY = 'famex_save'
-
 function loadSave() {
   try {
     const saved = localStorage.getItem(SAVE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
-      // Merge saved state with fresh init to catch any new celebs added to data.js
       const fresh = initState()
       return {
-        ...fresh,
-        ...parsed,
-        // Keep fresh prices/history/buzz for any new celebs not in save
-        prices:   { ...fresh.prices,   ...parsed.prices },
-        history:  { ...fresh.history,  ...parsed.history },
-        buzz:     { ...fresh.buzz,     ...parsed.buzz },
-        buzzPrev: { ...fresh.buzzPrev, ...parsed.buzzPrev },
-        holdings: { ...fresh.holdings, ...parsed.holdings },
+        ...fresh, ...parsed,
+        prices:         { ...fresh.prices,         ...parsed.prices },
+        history:        { ...fresh.history,        ...parsed.history },
+        buzz:           { ...fresh.buzz,           ...parsed.buzz },
+        buzzPrev:       { ...fresh.buzzPrev,       ...parsed.buzzPrev },
+        holdings:       { ...fresh.holdings,       ...parsed.holdings },
         delistWarnings: { ...fresh.delistWarnings, ...parsed.delistWarnings },
       }
     }
-  } catch (e) {
-    console.warn('Could not load save:', e)
-  }
+  } catch (e) { console.warn('Could not load save:', e) }
   return initState()
 }
 
@@ -52,27 +51,130 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false)
   const [customCelebDefs, setCustomCelebDefs] = useState({})
   const [lastSaved, setLastSaved] = useState(null)
+  const [lastScraped, setLastScraped] = useState(null)
+  const [scraping, setScraping] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
 
-  // Auto-save every 60s and on state change
+  // Badge state
+  const [earnedBadges, setEarnedBadges] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('famex_badges') || '[]') } catch { return [] }
+  })
+  const [pendingBadge, setPendingBadge] = useState(null)
+  const badgeQueue = useRef([])
+
+  // Trade meta for badge tracking
+  const tradeMeta = useRef({
+    totalTrades: 0,
+    bestSellPct: 0,
+    longestHold: 0,
+    boughtLowBuzz: false,
+    heldThroughCrash: false,
+    ownedDelisted: false,
+    consecutiveDays: 1,
+  })
+
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  // Auto-save
   useEffect(() => {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(state))
       setLastSaved(new Date())
-    } catch (e) {
-      console.warn('Could not save:', e)
-    }
+    } catch (e) { console.warn('Could not save:', e) }
   }, [state])
 
-  // Market tick every 60s
+  // Save badges
+  useEffect(() => {
+    try { localStorage.setItem('famex_badges', JSON.stringify(earnedBadges)) } catch {}
+  }, [earnedBadges])
+
+  // Check badges after state changes
+  const checkAndAwardBadges = useCallback((newState) => {
+    const { earned, newlyEarned } = checkBadges(newState, earnedBadges, tradeMeta.current)
+    if (newlyEarned.length > 0) {
+      setEarnedBadges(earned)
+      badgeQueue.current = [...badgeQueue.current, ...newlyEarned]
+      if (!pendingBadge) setPendingBadge(badgeQueue.current.shift())
+    }
+  }, [earnedBadges, pendingBadge])
+
+  // Badge queue processor
+  const handleBadgeDone = useCallback(() => {
+    setPendingBadge(null)
+    if (badgeQueue.current.length > 0) {
+      setTimeout(() => setPendingBadge(badgeQueue.current.shift()), 500)
+    }
+  }, [])
+
+  // Scrape real news
+  const scrapeNews = useCallback(async () => {
+    setScraping(true)
+    try {
+      const res = await fetch('/api/scrape')
+      if (!res.ok) throw new Error('Scrape failed')
+      const data = await res.json()
+      if (data.error) { console.warn('Scrape error:', data.error); return }
+
+      setState(prev => {
+        const newBuzz = { ...prev.buzz }
+        const newNews = [...prev.news]
+        const now = new Date()
+        const time = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0')
+
+        // Apply real buzz scores
+        Object.entries(data.buzzScores || {}).forEach(([id, { buzz }]) => {
+          if (prev.active.includes(id)) newBuzz[id] = buzz
+        })
+
+        // Add real headlines to news feed
+        ;(data.topHeadlines || []).forEach(h => {
+          if (h.title) {
+            newNews.unshift({
+              headline: h.title, pub: h.source || 'Google News',
+              time, dir: h.celebId && newBuzz[h.celebId] > (prev.buzz[h.celebId] || 50) ? 1 : -1,
+              id: Date.now() + Math.random(), real: true, url: h.link,
+            })
+          }
+        })
+
+        return { ...prev, buzz: newBuzz, news: newNews.slice(0, 60) }
+      })
+
+      // Store suggestions for admin panel
+      if (data.suggestions?.length) setSuggestions(data.suggestions)
+      setLastScraped(new Date())
+    } catch (err) {
+      console.warn('Scrape failed:', err)
+    } finally {
+      setScraping(false)
+    }
+  }, [])
+
+  // Initial scrape + interval
+  useEffect(() => { scrapeNews() }, [])
+  useEffect(() => {
+    const interval = setInterval(scrapeNews, SCRAPE_INTERVAL)
+    return () => clearInterval(interval)
+  }, [scrapeNews])
+
+  // Market tick
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) { setState(s => tickMarket(s)); return UPDATE_INTERVAL }
+        if (prev <= 1) {
+          setState(s => {
+            const next = tickMarket(s)
+            checkAndAwardBadges(next)
+            return next
+          })
+          return UPDATE_INTERVAL
+        }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [checkAndAwardBadges])
 
   const showToast = useCallback((message, type) => setToast({ message, type }), [])
 
@@ -86,22 +188,38 @@ export default function App() {
       const newAvg = (h.avgCost * h.qty + total) / (h.qty + qty)
       const celeb = getAllCelebs(prev).find(c => c.id === id)
       showToast(`Bought ${qty}x ${celeb?.name} for ${fmt(total)}`, 'buy')
+
+      // Badge meta
+      tradeMeta.current.totalTrades++
+      if ((prev.buzz[id] || 50) < 20) tradeMeta.current.boughtLowBuzz = true
+
       const impacted = applyTradeImpact(prev, id, qty, true)
-      return { ...impacted, cash: impacted.cash - total, holdings: { ...impacted.holdings, [id]: { qty: h.qty + qty, avgCost: newAvg } } }
+      const next = { ...impacted, cash: impacted.cash - total, holdings: { ...impacted.holdings, [id]: { qty: h.qty + qty, avgCost: newAvg } } }
+      checkAndAwardBadges(next)
+      return next
     })
-  }, [showToast])
+  }, [showToast, checkAndAwardBadges])
 
   const handleSell = useCallback((id, qty) => {
     setState(prev => {
       const h = prev.holdings[id] || { qty: 0, avgCost: 0 }
       if (h.qty < qty) { showToast(`You only own ${h.qty} share${h.qty !== 1 ? 's' : ''}!`, 'error'); return prev }
-      const total = prev.prices[id] * qty
+      const price = prev.prices[id]
+      const total = price * qty
       const celeb = getAllCelebs(prev).find(c => c.id === id)
       showToast(`Sold ${qty}x ${celeb?.name} for ${fmt(total)}`, 'sell')
+
+      // Badge meta
+      tradeMeta.current.totalTrades++
+      const pct = h.avgCost > 0 ? ((price - h.avgCost) / h.avgCost) * 100 : 0
+      if (pct > tradeMeta.current.bestSellPct) tradeMeta.current.bestSellPct = pct
+
       const impacted = applyTradeImpact(prev, id, qty, false)
-      return { ...impacted, cash: impacted.cash + total, holdings: { ...impacted.holdings, [id]: { qty: h.qty - qty, avgCost: h.qty - qty === 0 ? 0 : h.avgCost } } }
+      const next = { ...impacted, cash: impacted.cash + total, holdings: { ...impacted.holdings, [id]: { qty: h.qty - qty, avgCost: h.qty - qty === 0 ? 0 : h.avgCost } } }
+      checkAndAwardBadges(next)
+      return next
     })
-  }, [showToast])
+  }, [showToast, checkAndAwardBadges])
 
   const handleAddCeleb = useCallback((celeb) => {
     setCustomCelebDefs(prev => ({ ...prev, [celeb.id]: celeb }))
@@ -115,18 +233,19 @@ export default function App() {
       delistWarnings: { ...prev.delistWarnings, [celeb.id]: 0 },
       holdings: { ...prev.holdings, [celeb.id]: { qty: 0, avgCost: 0 } },
       customCelebs: { ...(prev.customCelebs || {}), [celeb.id]: celeb },
-      news: [{ headline: `🆕 ${celeb.name} has joined Fame Exchange!`, pub: 'Fame Exchange', time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), dir: 1, id: Date.now() }, ...prev.news],
+      news: [{ headline: `🆕 ${celeb.name} has joined FameX!`, pub: 'FameX', time: new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }), dir: 1, id: Date.now() }, ...prev.news],
     }))
   }, [])
 
   const handleRemoveCeleb = useCallback((id) => {
     setState(prev => {
       const celeb = getAllCelebs(prev).find(c => c.id === id)
+      if (prev.holdings[id]?.qty > 0) tradeMeta.current.ownedDelisted = true
       return {
         ...prev,
         active: prev.active.filter(a => a !== id),
         prices: { ...prev.prices, [id]: 0 },
-        news: [{ headline: `⚠️ ${celeb?.name || id} delisted by admin`, pub: 'Fame Exchange', time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), dir: -1, id: Date.now() }, ...prev.news],
+        news: [{ headline: `⚠️ ${celeb?.name || id} delisted by admin`, pub: 'FameX', time: new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }), dir: -1, id: Date.now() }, ...prev.news],
       }
     })
   }, [])
@@ -136,15 +255,16 @@ export default function App() {
       ...prev,
       prices: { ...prev.prices, [id]: vals.price },
       buzz: { ...prev.buzz, [id]: vals.buzz },
-      customCelebs: {
-        ...(prev.customCelebs || {}),
-        [id]: { ...(prev.customCelebs?.[id] || {}), volatility: vals.volatility, buzzBase: vals.buzzBase },
-      },
+      customCelebs: { ...(prev.customCelebs || {}), [id]: { ...(prev.customCelebs?.[id] || {}), volatility: vals.volatility, buzzBase: vals.buzzBase } },
     }))
   }, [])
 
   const handleMarketEvent = useCallback((id, eventType, headline) => {
     const impact = EVENT_IMPACTS[eventType] || EVENT_IMPACTS.surge
+    if (eventType === 'crash' || eventType === 'scandal') {
+      const holdings = stateRef.current.holdings
+      if (holdings[id]?.qty > 0) tradeMeta.current.heldThroughCrash = true
+    }
     setState(prev => {
       const currentBuzz = prev.buzz[id] || 50
       const newBuzz = Math.min(100, Math.max(0, currentBuzz + impact.buzzDelta))
@@ -152,11 +272,11 @@ export default function App() {
       const customUpdate = impact.resetBase ? {
         customCelebs: { ...(prev.customCelebs || {}), [id]: { ...(prev.customCelebs?.[id] || celeb || {}), buzzBase: Math.min(95, (celeb?.buzzBase || 70) + 10) } }
       } : {}
-      const time = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      const time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
       return {
         ...prev, ...customUpdate,
         buzz: { ...prev.buzz, [id]: newBuzz },
-        news: [{ headline, pub: 'Admin', time, dir: impact.buzzDelta > 0 ? 1 : -1, id: Date.now() }, ...prev.news],
+        news: [{ headline, pub: 'FameX Admin', time, dir: impact.buzzDelta > 0 ? 1 : -1, id: Date.now() }, ...prev.news],
       }
     })
   }, [])
@@ -194,9 +314,15 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', flexWrap: 'wrap', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                Fame<span style={{ color: 'var(--gold)' }}>Xchange</span>
+                Fame<span style={{ color: 'var(--gold)' }}>X</span>
               </span>
               <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>BETA</span>
+              {scraping && <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--blue)' }}>📡 scraping news...</span>}
+              {lastScraped && !scraping && (
+                <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
+                  📡 live · {lastScraped.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {[
@@ -218,7 +344,7 @@ export default function App() {
                     style={{ transition: 'stroke-dashoffset 1s linear' }}
                   />
                 </svg>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{countdown}s</span>
+                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{countdown}s</span>
               </div>
               {lastSaved && (
                 <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
@@ -231,11 +357,7 @@ export default function App() {
                   setState(initState())
                   showToast('Game reset — good luck!', 'buy')
                 }
-              }} style={{
-                padding: '5px 10px', borderRadius: 6, fontSize: 11,
-                border: '1px solid var(--border)', background: 'transparent',
-                color: 'var(--text3)', fontFamily: 'var(--font-mono)', cursor: 'pointer',
-              }}>↺ Reset</button>
+              }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>↺ Reset</button>
             </div>
           </div>
         </div>
@@ -244,9 +366,12 @@ export default function App() {
 
       <main style={{ flex: 1, maxWidth: 1200, margin: '0 auto', padding: '20px', width: '100%' }}>
         <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-          {['market', 'portfolio', 'news'].map(t => (
+          {['market', 'portfolio', 'news', 'trophies'].map(t => (
             <button key={t} style={tabStyle(t)} onClick={() => setTab(t)}>
-              {t === 'market' ? 'Market' : t === 'portfolio' ? 'My Portfolio' : 'Buzz Feed'}
+              {t === 'market'    ? 'Market' :
+               t === 'portfolio' ? 'My Portfolio' :
+               t === 'news'      ? `Buzz Feed${state.news.filter(n=>n.real).length > 0 ? ' 📡' : ''}` :
+               `🏆 Trophies${earnedBadges.length > 0 ? ` (${earnedBadges.length})` : ''}`}
             </button>
           ))}
         </div>
@@ -268,28 +393,30 @@ export default function App() {
             </div>
           </>
         )}
+
         {tab === 'portfolio' && <Portfolio holdings={state.holdings} prices={state.prices} activeCelebs={activeCelebs} />}
-        {tab === 'news' && <NewsFeed news={state.news} />}
+        {tab === 'news'      && <NewsFeed news={state.news} />}
+        {tab === 'trophies'  && <TrophyCabinet earnedBadges={earnedBadges} />}
       </main>
 
       <Toast message={toast.message} type={toast.type} onDone={() => setToast({ message: '', type: '' })} />
 
-      {/* Fixed admin button — bottom right, hard to miss */}
+      {/* Badge unlock popup */}
+      <BadgeUnlock newBadgeId={pendingBadge} onDone={handleBadgeDone} />
+
+      {/* Fixed admin button */}
       <button onClick={() => setShowAdmin(true)} style={{
-        position: 'fixed', bottom: 32, right: 32,
-        padding: '12px 20px', borderRadius: 12,
-        border: '2px solid #f5c842',
-        background: '#f5c842', color: '#000',
-        fontSize: 14, fontWeight: 800,
-        fontFamily: 'var(--font-display)',
-        cursor: 'pointer', zIndex: 999,
-        boxShadow: '0 4px 24px rgba(245,200,66,0.4)',
+        position: 'fixed', bottom: 32, right: 32, padding: '12px 20px',
+        borderRadius: 12, border: '2px solid #f5c842', background: '#f5c842',
+        color: '#000', fontSize: 14, fontWeight: 800, fontFamily: 'var(--font-display)',
+        cursor: 'pointer', zIndex: 999, boxShadow: '0 4px 24px rgba(245,200,66,0.4)',
         letterSpacing: '0.02em',
       }}>⚙ ADMIN</button>
 
       {showAdmin && (
         <AdminPanel
           state={{ ...state, customCelebs: { ...state.customCelebs, ...customCelebDefs } }}
+          suggestions={suggestions}
           onAddCeleb={handleAddCeleb}
           onRemoveCeleb={handleRemoveCeleb}
           onUpdateCeleb={handleUpdateCeleb}
