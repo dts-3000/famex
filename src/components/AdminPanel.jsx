@@ -101,7 +101,8 @@ function getAllCelebsFromState(state) {
     .filter(Boolean)
 }
 
-export default function AdminPanel({ state, onAddCeleb, onRemoveCeleb, onUpdateCeleb, onMarketEvent, onClose }) {
+export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemoveCeleb, onUpdateCeleb, onMarketEvent, onClose }) {
+  const props = { suggestions }
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
   const [pwError, setPwError] = useState('')
@@ -249,6 +250,7 @@ export default function AdminPanel({ state, onAddCeleb, onRemoveCeleb, onUpdateC
           {sectionBtn('add', '➕ Add Celeb')}
           {sectionBtn('csv', '📂 CSV Upload')}
           {sectionBtn('events', '💥 Market Events')}
+          {props.suggestions?.length > 0 && sectionBtn('trending', `📰 Trending (${props.suggestions.length})`)}
         </div>
 
         {/* MANAGE CELEBS */}
@@ -483,6 +485,37 @@ export default function AdminPanel({ state, onAddCeleb, onRemoveCeleb, onUpdateC
           </div>
         )}
       </div>
+
+        {/* TRENDING SUGGESTIONS */}
+        {activeSection === 'trending' && (
+          <div>
+            <div style={{ fontSize: 13, color: '#888', fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>
+              These names appeared 3+ times in today's Google News but aren't on the exchange yet.
+            </div>
+            {suggestions.map((s, i) => (
+              <div key={i} style={cardStyle}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 28 }}>📰</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#f0ede8', fontFamily: "'Syne', sans-serif" }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: '#555550', fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+                      Mentioned {s.count}x today · suggested ${s.suggestedPrice} · buzz {s.suggestedBuzzBase}/100
+                    </div>
+                  </div>
+                  <button onClick={() => {
+                    onAddCeleb({
+                      id: s.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                      name: s.name, emoji: '⭐', sector: 'Music',
+                      basePrice: s.suggestedPrice, volatility: s.suggestedVolatility,
+                      buzzBase: s.suggestedBuzzBase, buzzDecayRate: s.suggestedDecayRate,
+                    })
+                    showToast(`✅ ${s.name} added!`)
+                  }} style={btnStyle('#00d084')}>➕ Add</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       {toast && (
         <div style={{
