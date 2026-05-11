@@ -1,253 +1,225 @@
 // api/scrape.js — Vercel serverless function (CommonJS)
-// Scrapes Google News via ScrapingBee
+// Uses NewsAPI to fetch headlines and score celebs by mention count
+// Smart batching: stays within 100 requests/day free tier
 
-const CELEB_NAMES = [
-  ['tayswift',      ['Taylor Swift']],
-  ['beyonce',       ['Beyonce', 'Beyoncé']],
-  ['adele',         ['Adele']],
-  ['edsheeran',     ['Ed Sheeran']],
-  ['dualipa',       ['Dua Lipa']],
-  ['samsmith',      ['Sam Smith']],
-  ['tomholland',    ['Tom Holland']],
-  ['emmastone',     ['Emma Stone']],
-  ['oliviacolman',  ['Olivia Colman']],
-  ['idriselba',     ['Idris Elba']],
-  ['judidench',     ['Judi Dench']],
-  ['barrykeoghan',  ['Barry Keoghan']],
-  ['lewishamilton', ['Lewis Hamilton']],
-  ['davebeckham',   ['David Beckham', 'Beckham']],
-  ['bukayosaka',    ['Bukayo Saka', 'Saka']],
-  ['bellingham',    ['Jude Bellingham', 'Bellingham']],
-  ['andymurray',    ['Andy Murray']],
-  ['benstokes',     ['Ben Stokes']],
-  ['caitlinclark',  ['Caitlin Clark']],
-  ['maxverstappen', ['Max Verstappen', 'Verstappen']],
-  ['keirmstarmer',  ['Keir Starmer', 'Starmer']],
-  ['trump',         ['Donald Trump', 'Trump']],
-  ['albanese',      ['Anthony Albanese', 'Albanese']],
-  ['nigelfar',      ['Nigel Farage', 'Farage']],
-  ['princewilliam', ['Prince William']],
-  ['harryprince',   ['Prince Harry']],
-  ['elonmusk',      ['Elon Musk', 'Musk']],
-  ['damiansmith',   ['Damian Smith']],
-  ['billieeilish',  ['Billie Eilish']],
-  ['arianagrande',  ['Ariana Grande']],
-  ['harrystyles',   ['Harry Styles']],
-  ['drake',         ['Drake']],
-  ['rihanna',       ['Rihanna']],
-  ['kanyewest',     ['Kanye West', 'Kanye', 'Ye']],
-  ['ladygaga',      ['Lady Gaga']],
-  ['cristiano',     ['Cristiano Ronaldo', 'Ronaldo']],
-  ['leomessi',      ['Lionel Messi', 'Messi']],
-  ['lebron',        ['LeBron James', 'LeBron']],
-  ['erling',        ['Erling Haaland', 'Haaland']],
-  ['jeffbezos',     ['Jeff Bezos', 'Bezos']],
-  ['markzuckerberg',['Mark Zuckerberg', 'Zuckerberg']],
-  ['billgates',     ['Bill Gates']],
-  ['samaltman',     ['Sam Altman']],
-  ['kimkardashian', ['Kim Kardashian', 'Kardashian']],
-  ['kyliejenner',   ['Kylie Jenner']],
-  ['oprah',         ['Oprah Winfrey', 'Oprah']],
-  ['vladiputin',    ['Vladimir Putin', 'Putin']],
-  ['volodymyrzel',  ['Volodymyr Zelensky', 'Zelensky']],
-  ['meghanmarkle',  ['Meghan Markle', 'Meghan']],
-  ['dwaynejo',      ['Dwayne Johnson', 'The Rock']],
-  ['ryanreynolds',  ['Ryan Reynolds']],
-  ['margotrobbie',  ['Margot Robbie']],
-  ['scarjo',        ['Scarlett Johansson']],
-  ['bradpitt',      ['Brad Pitt']],
-  ['nicolekidman',  ['Nicole Kidman']],
-  ['chrishemsworth',['Chris Hemsworth']],
-  ['oliviarodrigo', ['Olivia Rodrigo']],
-  ['sabcarp',       ['Sabrina Carpenter']],
-  ['kendricklamar', ['Kendrick Lamar']],
-  ['emmanuelmacron',['Emmanuel Macron', 'Macron']],
-  ['justintrudeau', ['Justin Trudeau', 'Trudeau']],
-  ['borisjo',       ['Boris Johnson', 'Boris']],
-  ['scottmorrison', ['Scott Morrison']],
-  ['charleskoen',   ['King Charles']],
-  ['queencamilla',  ['Queen Camilla']],
-  ['kyliemin',      ['Kylie Minogue']],
-  ['zendaya',       ['Zendaya']],
-  ['timcook',       ['Tim Cook']],
-  ['serenaswilliams',['Serena Williams']],
-  ['rogerfederer',  ['Roger Federer', 'Federer']],
-  ['tigerwoods',    ['Tiger Woods']],
-  ['tombrady',      ['Tom Brady']],
-  ['stephanicurry', ['Stephen Curry', 'Steph Curry']],
-  ['patmahomes',    ['Patrick Mahomes', 'Mahomes']],
-  ['anthonyjoshua', ['Anthony Joshua']],
-  ['tysonfury',     ['Tyson Fury']],
-  ['mileycyrus',    ['Miley Cyrus']],
-  ['selenagomez',   ['Selena Gomez']],
-  ['justinbieber',  ['Justin Bieber']],
-  ['kamallaharris', ['Kamala Harris']],
-  ['joebiden',      ['Joe Biden', 'Biden']],
-  ['rishi',         ['Rishi Sunak', 'Sunak']],
-  ['jacindaardern', ['Jacinda Ardern']],
-  ['gretathunberg', ['Greta Thunberg']],
-  ['robertdowney',  ['Robert Downey']],
-  ['leonardodicap', ['Leonardo DiCaprio', 'DiCaprio']],
-  ['keanugreeves',  ['Keanu Reeves']],
-  ['willsmith',     ['Will Smith']],
-  ['princeedward',  ['Prince Edward']],
-  ['princessanne',  ['Princess Anne']],
-  ['jackdorsey',    ['Jack Dorsey']],
-  ['sundar',        ['Sundar Pichai']],
-  ['neymarjr',      ['Kylian Mbappe', 'Mbappé', 'Mbappe']],
-  ['simonebilessp', ['Simone Biles']],
-  ['cateblanchett', ['Cate Blanchett']],
-  ['merylstreep',   ['Meryl Streep']],
-  ['annehathaway',  ['Anne Hathaway']],
+const CELEB_QUERIES = [
+  ['tayswift',       'Taylor Swift'],
+  ['beyonce',        'Beyonce'],
+  ['adele',          'Adele singer'],
+  ['edsheeran',      'Ed Sheeran'],
+  ['dualipa',        'Dua Lipa'],
+  ['samsmith',       'Sam Smith singer'],
+  ['tomholland',     'Tom Holland actor'],
+  ['emmastone',      'Emma Stone actress'],
+  ['oliviacolman',   'Olivia Colman'],
+  ['idriselba',      'Idris Elba'],
+  ['judidench',      'Judi Dench'],
+  ['barrykeoghan',   'Barry Keoghan'],
+  ['lewishamilton',  'Lewis Hamilton'],
+  ['davebeckham',    'David Beckham'],
+  ['bukayosaka',     'Bukayo Saka'],
+  ['bellingham',     'Jude Bellingham'],
+  ['andymurray',     'Andy Murray tennis'],
+  ['benstokes',      'Ben Stokes cricket'],
+  ['caitlinclark',   'Caitlin Clark basketball'],
+  ['maxverstappen',  'Max Verstappen'],
+  ['keirmstarmer',   'Keir Starmer'],
+  ['trump',          'Donald Trump'],
+  ['albanese',       'Anthony Albanese'],
+  ['nigelfar',       'Nigel Farage'],
+  ['princewilliam',  'Prince William'],
+  ['harryprince',    'Prince Harry'],
+  ['elonmusk',       'Elon Musk'],
+  ['billieeilish',   'Billie Eilish'],
+  ['arianagrande',   'Ariana Grande'],
+  ['harrystyles',    'Harry Styles'],
+  ['drake',          'Drake rapper'],
+  ['rihanna',        'Rihanna'],
+  ['kanyewest',      'Kanye West'],
+  ['ladygaga',       'Lady Gaga'],
+  ['cristiano',      'Cristiano Ronaldo'],
+  ['leomessi',       'Lionel Messi'],
+  ['lebron',         'LeBron James'],
+  ['erling',         'Erling Haaland'],
+  ['jeffbezos',      'Jeff Bezos'],
+  ['markzuckerberg', 'Mark Zuckerberg'],
+  ['billgates',      'Bill Gates'],
+  ['samaltman',      'Sam Altman'],
+  ['kimkardashian',  'Kim Kardashian'],
+  ['kyliejenner',    'Kylie Jenner'],
+  ['oprah',          'Oprah Winfrey'],
+  ['vladiputin',     'Vladimir Putin'],
+  ['volodymyrzel',   'Zelensky'],
+  ['meghanmarkle',   'Meghan Markle'],
+  ['dwaynejo',       'Dwayne Johnson'],
+  ['ryanreynolds',   'Ryan Reynolds'],
+  ['margotrobbie',   'Margot Robbie'],
+  ['scarjo',         'Scarlett Johansson'],
+  ['bradpitt',       'Brad Pitt'],
+  ['nicolekidman',   'Nicole Kidman'],
+  ['chrishemsworth', 'Chris Hemsworth'],
+  ['oliviarodrigo',  'Olivia Rodrigo'],
+  ['sabcarp',        'Sabrina Carpenter'],
+  ['kendricklamar',  'Kendrick Lamar'],
+  ['emmanuelmacron', 'Emmanuel Macron'],
+  ['justintrudeau',  'Justin Trudeau'],
+  ['borisjo',        'Boris Johnson'],
+  ['charleskoen',    'King Charles'],
+  ['kyliemin',       'Kylie Minogue'],
+  ['zendaya',        'Zendaya'],
+  ['timcook',        'Tim Cook Apple'],
+  ['serenaswilliams','Serena Williams'],
+  ['tigerwoods',     'Tiger Woods'],
+  ['tombrady',       'Tom Brady'],
+  ['stephanicurry',  'Stephen Curry'],
+  ['patmahomes',     'Patrick Mahomes'],
+  ['anthonyjoshua',  'Anthony Joshua'],
+  ['tysonfury',      'Tyson Fury'],
+  ['mileycyrus',     'Miley Cyrus'],
+  ['selenagomez',    'Selena Gomez'],
+  ['justinbieber',   'Justin Bieber'],
+  ['kamallaharris',  'Kamala Harris'],
+  ['joebiden',       'Joe Biden'],
+  ['rishi',          'Rishi Sunak'],
+  ['gretathunberg',  'Greta Thunberg'],
+  ['leonardodicap',  'Leonardo DiCaprio'],
+  ['willsmith',      'Will Smith actor'],
+  ['neymarjr',       'Kylian Mbappe'],
+  ['simonebilessp',  'Simone Biles'],
+  ['albanese',       'Anthony Albanese'],
+  ['damiansmith',    'Damian Smith'],
 ]
 
-function scoreCelebs(text) {
-  const scores = {}
-  CELEB_NAMES.forEach(([id, aliases]) => {
-    let count = 0
-    aliases.forEach(alias => {
-      const regex = new RegExp(alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
-      const matches = text.match(regex)
-      if (matches) count += matches.length
-    })
-    scores[id] = count
-  })
-  return scores
-}
+// High profile celebs fetched every call
+// Others fetched based on day of week to stay within 100/day limit
+const HIGH_PROFILE = ['trump', 'elonmusk', 'tayswift', 'beyonce', 'keirmstarmer', 
+  'albanese', 'leomessi', 'cristiano', 'lewishamilton', 'markzuckerberg',
+  'princewilliam', 'harryprince', 'bellingham', 'erling', 'samaltman']
 
-function mentionsToBuzz(count) {
-  if (count === 0)  return null  // null = don't override, keep existing
-  if (count >= 10) return 95
-  if (count >= 6)  return 85
-  if (count >= 3)  return 75
-  if (count >= 1)  return 65
+function mentionsToBuzz(totalResults) {
+  if (totalResults >= 500) return 95
+  if (totalResults >= 200) return 88
+  if (totalResults >= 100) return 80
+  if (totalResults >= 50)  return 72
+  if (totalResults >= 20)  return 65
+  if (totalResults >= 5)   return 58
+  if (totalResults >= 1)   return 52
   return null
 }
 
-function detectUnknowns(text) {
-  const knownNames = CELEB_NAMES.flatMap(([, aliases]) => aliases.map(a => a.toLowerCase()))
+async function fetchCeleb(apiKey, id, query) {
+  try {
+    const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${from}&sortBy=publishedAt&pageSize=5&language=en&apiKey=${apiKey}`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (data.status !== 'ok') return null
+    return {
+      id,
+      totalResults: data.totalResults || 0,
+      articles: (data.articles || []).slice(0, 3).map(a => ({
+        title:  a.title,
+        source: a.source?.name || 'News',
+        link:   a.url,
+        time:   new Date(a.publishedAt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }),
+      }))
+    }
+  } catch { return null }
+}
+
+function detectUnknowns(allTitles) {
+  const knownQueries = CELEB_QUERIES.map(([, q]) => q.toLowerCase())
+  const text = allTitles.join(' ')
   const namePattern = /\b([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})+)\b/g
   const found = {}
   let match
   while ((match = namePattern.exec(text)) !== null) {
     const name = match[1]
-    if (name.split(' ').length >= 2 && !knownNames.some(k => k === name.toLowerCase())) {
+    if (name.length > 6 && !knownQueries.some(q => q.includes(name.toLowerCase()))) {
       found[name] = (found[name] || 0) + 1
     }
   }
   return Object.entries(found)
-    .filter(([, count]) => count >= 3)
+    .filter(([, count]) => count >= 2)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
     .map(([name, count]) => ({
       name, count,
-      suggestedBuzzBase:   count >= 8 ? 82 : count >= 5 ? 72 : 62,
-      suggestedPrice:      count >= 8 ? 26 : count >= 5 ? 18 : 12,
+      suggestedBuzzBase:   count >= 5 ? 80 : count >= 3 ? 70 : 60,
+      suggestedPrice:      count >= 5 ? 24 : count >= 3 ? 16 : 12,
       suggestedVolatility: 0.035,
       suggestedDecayRate:  0.90,
     }))
 }
 
-async function fetchGoogleNews(apiKey, country) {
-  const url = `https://news.google.com/rss?hl=en-${country}&gl=${country}&ceid=${country}:en`
-  
-  const params = new URLSearchParams({
-    api_key: apiKey,
-    url,
-    render_js: 'false',  // RSS doesn't need JS rendering — saves credits!
-  })
-
-  const response = await fetch(`https://app.scrapingbee.com/api/v1/?${params}`)
-  if (!response.ok) throw new Error(`ScrapingBee ${response.status}: ${await response.text()}`)
-  
-  const xml = await response.text()
-  
-  // Parse RSS XML to extract headlines
-  const titles = []
-  const items = xml.match(/<item>[\s\S]*?<\/item>/g) || []
-  
-  items.forEach(item => {
-    const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/)
-    const linkMatch  = item.match(/<link>(.*?)<\/link>/)
-    const sourceMatch = item.match(/<source[^>]*>(.*?)<\/source>/)
-    const pubMatch   = item.match(/<pubDate>(.*?)<\/pubDate>/)
-    
-    if (titleMatch) {
-      titles.push({
-        title:  titleMatch[1].trim(),
-        link:   linkMatch?.[1]?.trim() || '',
-        source: sourceMatch?.[1]?.trim() || `Google News ${country}`,
-        time:   pubMatch?.[1]?.trim() || '',
-      })
-    }
-  })
-
-  return titles
-}
-
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Cache-Control', 's-maxage=7200') // Cache for 2 hours at Vercel edge
+  res.setHeader('Cache-Control', 's-maxage=86400') // Cache 24 hours at Vercel edge
 
-  const apiKey = process.env.SCRAPING_BEE_KEY
+  const apiKey = process.env.NEWS_API_KEY || process.env.VITE_NEWS_API_KEY
   if (!apiKey) {
-    return res.status(200).json({ error: 'SCRAPING_BEE_KEY not set' })
+    return res.status(200).json({ error: 'NEWS_API_KEY not set in environment variables' })
   }
 
   try {
-    // Fetch AU and US RSS feeds in parallel — only 2 credits!
-    const [auResult, usResult] = await Promise.allSettled([
-      fetchGoogleNews(apiKey, 'AU'),
-      fetchGoogleNews(apiKey, 'US'),
-    ])
+    // Work out which celebs to fetch today based on day of week
+    // High profile always fetched. Others split across days to stay under 100/day.
+    const dayOfWeek = new Date().getDay() // 0-6
+    const otherCelebs = CELEB_QUERIES.filter(([id]) => !HIGH_PROFILE.includes(id))
+    const chunkSize = Math.ceil(otherCelebs.length / 7)
+    const todaysOthers = otherCelebs.slice(dayOfWeek * chunkSize, (dayOfWeek + 1) * chunkSize)
+    const toFetch = [
+      ...CELEB_QUERIES.filter(([id]) => HIGH_PROFILE.includes(id)),
+      ...todaysOthers,
+    ]
 
-    const au = auResult.status === 'fulfilled' ? auResult.value : []
-    const us = usResult.status === 'fulfilled' ? usResult.value : []
-    const allHeadlines = [...au, ...us]
-
-    if (!allHeadlines.length) {
-      return res.status(200).json({
-        error: 'No headlines retrieved',
-        au: au.length, us: us.length,
-        auError: auResult.reason?.message,
-        usError: usResult.reason?.message,
-      })
+    // Fetch in batches of 5 with small delays
+    const results = []
+    for (let i = 0; i < toFetch.length; i += 5) {
+      const batch = toFetch.slice(i, i + 5)
+      const fetched = await Promise.all(batch.map(([id, query]) => fetchCeleb(apiKey, id, query)))
+      fetched.forEach(r => { if (r) results.push(r) })
+      if (i + 5 < toFetch.length) await new Promise(r => setTimeout(r, 200))
     }
 
-    const allText = allHeadlines.map(h => h.title).join(' ')
+    if (!results.length) {
+      return res.status(200).json({ error: 'No results from NewsAPI', hint: 'Check NEWS_API_KEY in Vercel env vars' })
+    }
 
-    // Score celebs by mention count
-    const mentionCounts = scoreCelebs(allText)
+    // Build buzz scores
     const buzzScores = {}
-    CELEB_NAMES.forEach(([id]) => {
-      const buzz = mentionsToBuzz(mentionCounts[id] || 0)
-      if (buzz !== null) buzzScores[id] = { mentions: mentionCounts[id], buzz }
+    results.forEach(({ id, totalResults }) => {
+      const buzz = mentionsToBuzz(totalResults)
+      if (buzz !== null) buzzScores[id] = { mentions: totalResults, buzz }
+    })
+
+    // Collect all headlines for buzz feed + unknown detection
+    const allTitles = []
+    const topHeadlines = []
+    const seen = new Set()
+
+    results.forEach(({ id, articles }) => {
+      articles.forEach(a => {
+        if (a.title && !a.title.includes('[Removed]') && !seen.has(a.title)) {
+          seen.add(a.title)
+          allTitles.push(a.title)
+          topHeadlines.push({ ...a, celebId: id })
+        }
+      })
     })
 
     // Detect unknown trending names
-    const suggestions = detectUnknowns(allText)
-
-    // Deduplicated headlines with celeb tag
-    const seen = new Set()
-    const topHeadlines = allHeadlines
-      .filter(h => { if (seen.has(h.title)) return false; seen.add(h.title); return true })
-      .slice(0, 40)
-      .map(h => ({
-        ...h,
-        celebId: CELEB_NAMES.find(([, aliases]) =>
-          aliases.some(a => h.title.toLowerCase().includes(a.toLowerCase()))
-        )?.[0] || null,
-      }))
+    const suggestions = detectUnknowns(allTitles)
 
     return res.status(200).json({
-      status: 'ok',
-      scrapedAt: new Date().toISOString(),
-      headlineCount: allHeadlines.length,
-      auCount: au.length,
-      usCount: us.length,
+      status:         'ok',
+      scrapedAt:      new Date().toISOString(),
+      celebsFetched:  results.length,
+      headlineCount:  topHeadlines.length,
       buzzScores,
-      topHeadlines,
+      topHeadlines:   topHeadlines.slice(0, 40),
       suggestions,
+      requestsUsed:   toFetch.length,
     })
 
   } catch (err) {
