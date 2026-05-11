@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, fmt } from './data.js'
+import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, getVolume, fmt } from './data.js'
 import { checkBadges } from './badges.js'
 import Ticker from './components/Ticker.jsx'
 import CelebCard from './components/CelebCard.jsx'
@@ -56,6 +56,8 @@ export default function App() {
   const [scraping, setScraping] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [newsCountdown, setNewsCountdown] = useState(SCRAPE_INTERVAL_SECS)
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('name') // name | price | buzz | change | volume
 
   // Badge state
   const [earnedBadges, setEarnedBadges] = useState(() => {
@@ -282,7 +284,27 @@ export default function App() {
   const pnl = (state.cash + portfolioValue) - STARTING_CASH
   const pnlUp = pnl >= 0
   const allSectors = ['All', ...new Set([...SECTORS, ...activeCelebs.map(c => c.sector)])]
-  const visibleCelebs = sector === 'All' ? activeCelebs : activeCelebs.filter(c => c.sector === sector)
+
+  // Filter by sector + search
+  const filteredCelebs = activeCelebs
+    .filter(c => sector === 'All' || c.sector === sector)
+    .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
+
+  // Sort
+  const visibleCelebs = [...filteredCelebs].sort((a, b) => {
+    switch (sortBy) {
+      case 'price':  return (state.prices[b.id] || 0) - (state.prices[a.id] || 0)
+      case 'buzz':   return (state.buzz[b.id] || 0) - (state.buzz[a.id] || 0)
+      case 'change': {
+        const chgA = state.history[a.id]?.length > 1 ? (state.prices[a.id] - state.history[a.id][state.history[a.id].length - 2]) / state.history[a.id][state.history[a.id].length - 2] : 0
+        const chgB = state.history[b.id]?.length > 1 ? (state.prices[b.id] - state.history[b.id][state.history[b.id].length - 2]) / state.history[b.id][state.history[b.id].length - 2] : 0
+        return chgB - chgA
+      }
+      case 'volume': return (getVolume(state, b.id).total) - (getVolume(state, a.id).total)
+      case 'owned':  return (state.holdings[b.id]?.qty || 0) - (state.holdings[a.id]?.qty || 0)
+      default:       return a.name.localeCompare(b.name)
+    }
+  })
 
   const r = 11, circ = 2 * Math.PI * r, offset = circ * (countdown / UPDATE_INTERVAL)
 
@@ -403,8 +425,61 @@ export default function App() {
 
         {tab === 'market' && (
           <>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+            {/* Sector filters */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
               {allSectors.map(s => <button key={s} style={filterStyle(s)} onClick={() => setSector(s)}>{s}</button>)}
+            </div>
+
+            {/* Search + Sort bar */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Search */}
+              <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
+                <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--text3)' }}>🔍</span>
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search celebrities..."
+                  style={{
+                    width: '100%', paddingLeft: 32, paddingRight: 10, paddingTop: 7, paddingBottom: 7,
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--font-mono)',
+                    fontSize: 12, outline: 'none',
+                  }}
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} style={{
+                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14,
+                  }}>✕</button>
+                )}
+              </div>
+
+              {/* Sort buttons */}
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginRight: 2 }}>SORT:</span>
+                {[
+                  { key: 'name',   label: 'A–Z' },
+                  { key: 'price',  label: 'Price' },
+                  { key: 'buzz',   label: 'Buzz' },
+                  { key: 'change', label: '% Change' },
+                  { key: 'volume', label: 'Volume' },
+                  { key: 'owned',  label: 'Owned' },
+                ].map(s => (
+                  <button key={s.key} onClick={() => setSortBy(s.key)} style={{
+                    padding: '4px 10px', borderRadius: 6, fontSize: 11,
+                    fontFamily: 'var(--font-mono)', border: '1px solid',
+                    borderColor: sortBy === s.key ? 'var(--gold)' : 'var(--border)',
+                    background: sortBy === s.key ? 'var(--gold-bg)' : 'transparent',
+                    color: sortBy === s.key ? 'var(--gold)' : 'var(--text3)',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}>{s.label}</button>
+                ))}
+              </div>
+
+              {/* Results count */}
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+                {visibleCelebs.length} of {activeCelebs.length}
+              </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
               {visibleCelebs.map(c => (
@@ -412,6 +487,7 @@ export default function App() {
                   price={state.prices[c.id]} history={state.history[c.id]}
                   buzz={state.buzz[c.id]} delistWarning={state.delistWarnings[c.id] || 0}
                   holding={state.holdings[c.id] || { qty: 0, avgCost: 0 }}
+                  volume={getVolume(state, c.id)}
                   onBuy={handleBuy} onSell={handleSell}
                 />
               ))}

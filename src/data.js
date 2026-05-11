@@ -101,25 +101,33 @@ export const BENCH = [
 ]
 
 export const SECTORS = ['All', ...new Set(CELEBRITIES.map(c => c.sector))]
-export const UPDATE_INTERVAL = 30
+export const UPDATE_INTERVAL = 10       // 10 second ticks — faster, smaller moves
 export const STARTING_CASH = 100000
 
-const TRADE_IMPACT = 0.0015
+// Price impact constants
+const TRADE_IMPACT    = 0.0008         // Smaller per-trade impact (was 0.0015)
+const VOLUME_WINDOW   = 60             // Look back 60 seconds for volume
+const VOLUME_IMPACT   = 0.12          // How much volume affects price (15% of total move)
+const BUZZ_WEIGHT     = 0.50          // Buzz level vs base
+const MOMENTUM_WEIGHT = 0.25          // Buzz rising/falling
+const VOLUME_WEIGHT   = 0.15          // Trade volume pressure
+const NOISE_WEIGHT    = 0.10          // Random noise
 
 export function initState() {
-  const prices = {}, history = {}, buzz = {}, buzzPrev = {}, holdings = {}, delistWarnings = {}
+  const prices = {}, history = {}, buzz = {}, buzzPrev = {}, holdings = {}, delistWarnings = {}, volume = {}
   CELEBRITIES.forEach(c => {
-    prices[c.id] = c.basePrice
-    history[c.id] = Array(20).fill(null).map(() => c.basePrice * (1 + (Math.random() - 0.5) * 0.06))
-    buzz[c.id] = c.buzzBase + (Math.random() - 0.5) * 6
-    buzzPrev[c.id] = buzz[c.id]
-    holdings[c.id] = { qty: 0, avgCost: 0 }
+    prices[c.id]         = c.basePrice
+    history[c.id]        = Array(20).fill(null).map(() => c.basePrice * (1 + (Math.random() - 0.5) * 0.06))
+    buzz[c.id]           = c.buzzBase + (Math.random() - 0.5) * 6
+    buzzPrev[c.id]       = buzz[c.id]
+    holdings[c.id]       = { qty: 0, avgCost: 0 }
     delistWarnings[c.id] = 0
+    volume[c.id]         = []   // Array of { qty, isBuy, time }
   })
   return {
     cash: STARTING_CASH,
     prices, history, buzz, buzzPrev,
-    holdings, delistWarnings,
+    holdings, delistWarnings, volume,
     active: CELEBRITIES.map(c => c.id),
     benchUsed: [],
     news: [],
@@ -130,11 +138,33 @@ function getCeleb(id) {
   return CELEBRITIES.find(c => c.id === id) || BENCH.find(c => c.id === id)
 }
 
-function calcPriceChange(celeb, buzz, prevBuzz) {
+/**
+ * Calculate net volume pressure from recent trades
+ * Returns value between -1 (all selling) and +1 (all buying)
+ */
+function calcVolumePressure(trades, now) {
+  const recent = trades.filter(t => now - t.time < VOLUME_WINDOW * 1000)
+  if (!recent.length) return 0
+  const netQty = recent.reduce((s, t) => s + (t.isBuy ? t.qty : -t.qty), 0)
+  const totalQty = recent.reduce((s, t) => s + t.qty, 0)
+  return totalQty > 0 ? (netQty / totalQty) : 0  // -1 to +1
+}
+
+/**
+ * Combined price change formula:
+ * buzz(50%) + momentum(25%) + volume(15%) + noise(10%)
+ * Smaller moves per tick since ticks are faster (10s vs 30s)
+ */
+function calcPriceChange(celeb, buzz, prevBuzz, volumePressure) {
   const buzzRatio    = (buzz - celeb.buzzBase) / 100
   const buzzMomentum = (buzz - prevBuzz) / 100
-  const noise        = (Math.random() - 0.5) * celeb.volatility * 0.3
-  return (buzzRatio * 0.50) + (buzzMomentum * 0.35) + noise
+  const noise        = (Math.random() - 0.5) * celeb.volatility * 0.15  // smaller noise
+  return (
+    buzzRatio       * BUZZ_WEIGHT     +
+    buzzMomentum    * MOMENTUM_WEIGHT +
+    volumePressure  * VOLUME_IMPACT * VOLUME_WEIGHT +
+    noise           * NOISE_WEIGHT
+  ) * 0.4  // scale down — faster ticks = smaller moves per tick
 }
 
 export function tickMarket(state) {
@@ -145,30 +175,39 @@ export function tickMarket(state) {
   const newDelist    = { ...state.delistWarnings }
   const newNews      = [...state.news]
   const newActive    = [...state.active]
-  const newBenchUsed = [...state.benchUsed ]
+  const newBenchUsed = [...state.benchUsed]
   const newHoldings  = { ...state.holdings }
+  const newVolume    = { ...state.volume }
   const tooDelist    = []
+  const now          = Date.now()
 
   state.active.forEach(id => {
     const c = getCeleb(id)
     if (!c) return
 
-    // Buzz decays toward base level
+    // 1. Buzz decays toward base
     const prev = newBuzz[id]
     let next = prev * c.buzzDecayRate + c.buzzBase * (1 - c.buzzDecayRate)
-    next += (Math.random() - 0.5) * 4
+    next += (Math.random() - 0.5) * 1.5  // smaller noise since faster ticks
     next = Math.min(100, Math.max(0, next))
     newBuzz[id] = next
 
-    // Price driven by buzz
-    const change = calcPriceChange(c, next, prev)
-    newPrices[id] = Math.max(0.50, newPrices[id] * (1 + change))
-    newHistory[id] = [...(newHistory[id] || []).slice(-39), newPrices[id]]
+    // 2. Calculate volume pressure from recent trades
+    const trades = newVolume[id] || []
+    const volumePressure = calcVolumePressure(trades, now)
 
-    // Delist warning — buzz below 15 for 3 consecutive ticks
+    // 3. Prune old trades outside window
+    newVolume[id] = trades.filter(t => now - t.time < VOLUME_WINDOW * 1000)
+
+    // 4. Price change — buzz + momentum + volume + noise
+    const change = calcPriceChange(c, next, prev, volumePressure)
+    newPrices[id] = Math.max(0.10, newPrices[id] * (1 + change))
+    newHistory[id] = [...(newHistory[id] || []).slice(-79), newPrices[id]]  // more history for smoother charts
+
+    // 5. Delist check
     if (next < 15) {
       newDelist[id] = (newDelist[id] || 0) + 1
-      if (newDelist[id] >= 3) tooDelist.push(id)
+      if (newDelist[id] >= 9) tooDelist.push(id)  // 9 ticks at 10s = 90 seconds of low buzz
     } else {
       newDelist[id] = 0
     }
@@ -177,8 +216,7 @@ export function tickMarket(state) {
   // Process delistings
   tooDelist.forEach(id => {
     const c = getCeleb(id)
-    const now  = new Date()
-    const time = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0')
+    const time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
     newNews.unshift({
       headline: `⚠️ ${c?.name || id} DELISTED — buzz hit zero. Shares worthless.`,
       pub: 'FameX', time, dir: -1, id: Date.now() + Math.random()
@@ -196,6 +234,7 @@ export function tickMarket(state) {
       newBuzz[rookie.id]     = rookie.buzzBase
       newBuzzPrev[rookie.id] = rookie.buzzBase
       newDelist[rookie.id]   = 0
+      newVolume[rookie.id]   = []
       newHoldings[rookie.id] = newHoldings[rookie.id] || { qty: 0, avgCost: 0 }
       newNews.unshift({
         headline: `🆕 ${rookie.name} joins FameX!`,
@@ -209,19 +248,38 @@ export function tickMarket(state) {
     prices: newPrices, history: newHistory,
     buzz: newBuzz, buzzPrev: newBuzzPrev,
     holdings: newHoldings, delistWarnings: newDelist,
+    volume: newVolume,
     active: newActive, benchUsed: newBenchUsed,
     news: newNews.slice(0, 60),
   }
 }
 
+/**
+ * Apply trade price impact + record volume
+ * Smaller immediate impact since volume builds pressure over time
+ */
 export function applyTradeImpact(state, id, qty, isBuy) {
   const impact   = Math.sqrt(qty) * TRADE_IMPACT * (isBuy ? 1 : -1)
-  const newPrice = Math.max(0.50, state.prices[id] * (1 + impact))
+  const newPrice = Math.max(0.10, state.prices[id] * (1 + impact))
+  const newVolume = {
+    ...state.volume,
+    [id]: [...(state.volume[id] || []), { qty, isBuy, time: Date.now() }]
+  }
   return {
     ...state,
     prices:  { ...state.prices,  [id]: newPrice },
-    history: { ...state.history, [id]: [...(state.history[id] || []).slice(-39), newPrice] },
+    history: { ...state.history, [id]: [...(state.history[id] || []).slice(-79), newPrice] },
+    volume:  newVolume,
   }
+}
+
+/** Returns total buy/sell volume for a celeb in last 60s */
+export function getVolume(state, id) {
+  const now    = Date.now()
+  const trades = (state.volume?.[id] || []).filter(t => now - t.time < 60000)
+  const buys   = trades.filter(t => t.isBuy).reduce((s, t) => s + t.qty, 0)
+  const sells  = trades.filter(t => !t.isBuy).reduce((s, t) => s + t.qty, 0)
+  return { buys, sells, total: buys + sells }
 }
 
 export function getAllCelebs(state) {
