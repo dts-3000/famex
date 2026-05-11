@@ -373,9 +373,13 @@ export default function App() {
                 </span>
               )}
               <button onClick={() => {
-                if (confirm('Reset game? This will clear all your holdings and start fresh.')) {
+                if (confirm('Reset game? This will clear all your holdings and trophies and start fresh.')) {
                   localStorage.removeItem(SAVE_KEY)
+                  localStorage.removeItem('famex_badges')
                   setState(initState())
+                  setEarnedBadges([])
+                  setPendingBadge(null)
+                  badgeQueue.current = []
                   showToast('Game reset — good luck!', 'buy')
                 }
               }} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}>↺ Reset</button>
