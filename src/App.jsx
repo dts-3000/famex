@@ -136,8 +136,9 @@ export default function App() {
           if (h.title) {
             newNews.unshift({
               headline: h.title, pub: h.source || 'Google News',
-              time, dir: h.celebId && newBuzz[h.celebId] > (prev.buzz[h.celebId] || 50) ? 1 : -1,
-              id: Date.now() + Math.random(), real: true, url: h.link,
+              time, dir: 1,  // always positive — being mentioned = buzz
+              id: Date.now() + Math.random(), real: true,
+              url: h.link, mentions: h.mentions || 0,
             })
           }
         })
