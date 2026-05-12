@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, getVolume, fmt } from './data.js'
+import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, getVolume, manualDelist, fmt } from './data.js'
 import { checkBadges } from './badges.js'
 import Ticker from './components/Ticker.jsx'
 import CelebCard from './components/CelebCard.jsx'
@@ -219,6 +219,11 @@ export default function App() {
       return next
     })
   }, [showToast, checkAndAwardBadges])
+
+  const handleDelist = useCallback((id, addReplacement) => {
+    setState(prev => manualDelist(prev, id, addReplacement))
+    if (state.holdings[id]?.qty > 0) tradeMeta.current.ownedDelisted = true
+  }, [state.holdings])
 
   const handleAddCeleb = useCallback((celeb) => {
     setCustomCelebDefs(prev => ({ ...prev, [celeb.id]: celeb }))
@@ -506,14 +511,28 @@ export default function App() {
       {/* Badge unlock popup */}
       <BadgeUnlock newBadgeId={pendingBadge} onDone={handleBadgeDone} />
 
-      {/* Fixed admin button */}
-      <button onClick={() => setShowAdmin(true)} style={{
-        position: 'fixed', bottom: 32, right: 32, padding: '12px 20px',
-        borderRadius: 12, border: '2px solid #f5c842', background: '#f5c842',
-        color: '#000', fontSize: 14, fontWeight: 800, fontFamily: 'var(--font-display)',
-        cursor: 'pointer', zIndex: 999, boxShadow: '0 4px 24px rgba(245,200,66,0.4)',
-        letterSpacing: '0.02em',
-      }}>⚙ ADMIN</button>
+      {/* Fixed admin button with warning badge */}
+      <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 999 }}>
+        {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 25).length > 0 && (
+          <div style={{
+            position: 'absolute', top: -8, right: -8,
+            background: '#ff4455', color: '#fff', borderRadius: '50%',
+            width: 20, height: 20, fontSize: 11, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--font-mono)', zIndex: 1000,
+          }}>
+            {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 25).length}
+          </div>
+        )}
+        <button onClick={() => setShowAdmin(true)} style={{
+          padding: '12px 20px', borderRadius: 12,
+          border: '2px solid #f5c842', background: '#f5c842',
+          color: '#000', fontSize: 14, fontWeight: 800,
+          fontFamily: 'var(--font-display)', cursor: 'pointer',
+          boxShadow: '0 4px 24px rgba(245,200,66,0.4)',
+          letterSpacing: '0.02em',
+        }}>⚙ ADMIN</button>
+      </div>
 
       {showAdmin && (
         <AdminPanel
@@ -523,6 +542,7 @@ export default function App() {
           onRemoveCeleb={handleRemoveCeleb}
           onUpdateCeleb={handleUpdateCeleb}
           onMarketEvent={handleMarketEvent}
+          onDelist={handleDelist}
           onClose={() => setShowAdmin(false)}
         />
       )}

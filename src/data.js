@@ -185,12 +185,9 @@ export function tickMarket(state) {
     const c = getCeleb(id)
     if (!c) return
 
-    // 1. Buzz decays toward base
+    // Buzz stays fixed between news scrapes — only changes when scraper runs
     const prev = newBuzz[id]
-    let next = prev * c.buzzDecayRate + c.buzzBase * (1 - c.buzzDecayRate)
-    next += (Math.random() - 0.5) * 1.5  // smaller noise since faster ticks
-    next = Math.min(100, Math.max(0, next))
-    newBuzz[id] = next
+    const next = prev  // no decay!
 
     // 2. Calculate volume pressure from recent trades
     const trades = newVolume[id] || []
@@ -204,44 +201,15 @@ export function tickMarket(state) {
     newPrices[id] = Math.max(0.10, newPrices[id] * (1 + change))
     newHistory[id] = [...(newHistory[id] || []).slice(-79), newPrices[id]]  // more history for smoother charts
 
-    // 5. Delist check
-    if (next < 15) {
+    // 5. Low buzz warning — flag for admin review, NO automatic delist
+    if (next < 25) {
       newDelist[id] = (newDelist[id] || 0) + 1
-      if (newDelist[id] >= 9) tooDelist.push(id)  // 9 ticks at 10s = 90 seconds of low buzz
     } else {
       newDelist[id] = 0
     }
   })
 
-  // Process delistings
-  tooDelist.forEach(id => {
-    const c = getCeleb(id)
-    const time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-    newNews.unshift({
-      headline: `⚠️ ${c?.name || id} DELISTED — buzz hit zero. Shares worthless.`,
-      pub: 'FameX', time, dir: -1, id: Date.now() + Math.random()
-    })
-    newPrices[id] = 0
-    const idx = newActive.indexOf(id)
-    if (idx > -1) newActive.splice(idx, 1)
-    const available = BENCH.filter(b => !newBenchUsed.includes(b.id))
-    if (available.length > 0) {
-      const rookie = available[Math.floor(Math.random() * available.length)]
-      newBenchUsed.push(rookie.id)
-      newActive.push(rookie.id)
-      newPrices[rookie.id]   = rookie.basePrice
-      newHistory[rookie.id]  = Array(20).fill(null).map(() => rookie.basePrice * (1 + (Math.random() - 0.5) * 0.04))
-      newBuzz[rookie.id]     = rookie.buzzBase
-      newBuzzPrev[rookie.id] = rookie.buzzBase
-      newDelist[rookie.id]   = 0
-      newVolume[rookie.id]   = []
-      newHoldings[rookie.id] = newHoldings[rookie.id] || { qty: 0, avgCost: 0 }
-      newNews.unshift({
-        headline: `🆕 ${rookie.name} joins FameX!`,
-        pub: 'FameX', time, dir: 1, id: Date.now() + Math.random() + 1
-      })
-    }
-  })
+  // NO automatic delistings — admin handles manually
 
   return {
     ...state,
@@ -280,6 +248,51 @@ export function getVolume(state, id) {
   const buys   = trades.filter(t => t.isBuy).reduce((s, t) => s + t.qty, 0)
   const sells  = trades.filter(t => !t.isBuy).reduce((s, t) => s + t.qty, 0)
   return { buys, sells, total: buys + sells }
+}
+
+/** Manually delist a celeb and optionally bring on a replacement */
+export function manualDelist(state, id, addReplacement = true) {
+  const c = getCeleb(id)
+  const time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+  const newPrices    = { ...state.prices,    [id]: 0 }
+  const newActive    = state.active.filter(a => a !== id)
+  const newBenchUsed = [...state.benchUsed]
+  const newHistory   = { ...state.history }
+  const newBuzz      = { ...state.buzz }
+  const newBuzzPrev  = { ...state.buzzPrev }
+  const newDelist    = { ...state.delistWarnings, [id]: 0 }
+  const newVolume    = { ...state.volume }
+  const newHoldings  = { ...state.holdings }
+  const newNews      = [
+    { headline: `⚠️ ${c?.name || id} has been DELISTED from FameX`, pub: 'FameX Admin', time, dir: -1, id: Date.now() },
+    ...state.news
+  ]
+
+  let rookie = null
+  if (addReplacement) {
+    const available = BENCH.filter(b => !newBenchUsed.includes(b.id))
+    if (available.length > 0) {
+      rookie = available[Math.floor(Math.random() * available.length)]
+      newBenchUsed.push(rookie.id)
+      newActive.push(rookie.id)
+      newPrices[rookie.id]   = rookie.basePrice
+      newHistory[rookie.id]  = Array(20).fill(null).map(() => rookie.basePrice * (1 + (Math.random() - 0.5) * 0.04))
+      newBuzz[rookie.id]     = rookie.buzzBase
+      newBuzzPrev[rookie.id] = rookie.buzzBase
+      newDelist[rookie.id]   = 0
+      newVolume[rookie.id]   = []
+      newHoldings[rookie.id] = newHoldings[rookie.id] || { qty: 0, avgCost: 0 }
+      newNews.unshift({ headline: `🆕 ${rookie.name} joins FameX!`, pub: 'FameX', time, dir: 1, id: Date.now() + 1 })
+    }
+  }
+
+  return {
+    ...state,
+    prices: newPrices, active: newActive, benchUsed: newBenchUsed,
+    history: newHistory, buzz: newBuzz, buzzPrev: newBuzzPrev,
+    delistWarnings: newDelist, volume: newVolume, holdings: newHoldings,
+    news: newNews.slice(0, 60),
+  }
 }
 
 export function getAllCelebs(state) {
