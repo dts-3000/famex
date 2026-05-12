@@ -101,7 +101,7 @@ function getAllCelebsFromState(state) {
     .filter(Boolean)
 }
 
-export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemoveCeleb, onUpdateCeleb, onMarketEvent, onClose }) {
+export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemoveCeleb, onUpdateCeleb, onMarketEvent, onDelist, onClose }) {
   const props = { suggestions }
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
@@ -250,6 +250,7 @@ export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemo
           {sectionBtn('add', '➕ Add Celeb')}
           {sectionBtn('csv', '📂 CSV Upload')}
           {sectionBtn('events', '💥 Market Events')}
+          {sectionBtn('delist', `⚠️ Delist Centre${getDelistWarnings(state, allCelebs).length > 0 ? ` (${getDelistWarnings(state, allCelebs).length})` : ''}`)}
           {props.suggestions?.length > 0 && sectionBtn('trending', `📰 Trending (${props.suggestions.length})`)}
         </div>
 
@@ -517,6 +518,90 @@ export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemo
           </div>
         )}
 
+        {/* DELIST CENTRE */}
+        {activeSection === 'delist' && (
+          <div>
+            <div style={{ fontSize: 13, color: '#888', fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>
+              Celebs with buzz below 25 are flagged here. You decide whether to delist or keep them.
+            </div>
+
+            {/* Warning zone */}
+            {(() => {
+              const warnings = getDelistWarnings(state, allCelebs)
+              if (!warnings.length) return (
+                <div style={{ ...cardStyle, textAlign: 'center', color: '#555550', fontFamily: "'DM Mono', monospace", fontSize: 13 }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>✅</div>
+                  No celebs in warning territory — all buzz scores above 25
+                </div>
+              )
+              return warnings.map(({ celeb, buzz, price, holdings }) => (
+                <div key={celeb.id} style={{ ...cardStyle, borderColor: buzz < 15 ? 'rgba(255,68,85,0.4)' : 'rgba(255,140,0,0.3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 26 }}>{celeb.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#f0ede8', fontFamily: "'Syne', sans-serif" }}>{celeb.name}</div>
+                      <div style={{ fontSize: 11, color: '#555550', fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+                        {celeb.sector} · buzz {Math.round(buzz)}/100 · ${price?.toFixed(2)} · {holdings} shares held by player
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <div style={{
+                        fontSize: 11, fontFamily: "'DM Mono', monospace",
+                        color: buzz < 15 ? '#ff4455' : '#ff8c00',
+                        background: buzz < 15 ? 'rgba(255,68,85,0.1)' : 'rgba(255,140,0,0.1)',
+                        border: `1px solid ${buzz < 15 ? 'rgba(255,68,85,0.3)' : 'rgba(255,140,0,0.3)'}`,
+                        borderRadius: 6, padding: '3px 8px',
+                      }}>
+                        {buzz < 15 ? '🚨 Critical' : '⚠️ Warning'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => {
+                          onDelist(celeb.id, true)
+                          showToast(`${celeb.name} delisted — replacement incoming`)
+                        }} style={btnStyle('#ff4455')}>Delist + Replace</button>
+                        <button onClick={() => {
+                          onDelist(celeb.id, false)
+                          showToast(`${celeb.name} delisted`)
+                        }} style={btnStyle('#888')}>Delist Only</button>
+                        <button onClick={() => {
+                          onUpdateCeleb(celeb.id, { price: price, buzz: celeb.buzzBase, volatility: celeb.volatility, buzzBase: celeb.buzzBase })
+                          showToast(`${celeb.name} buzz reset to base`)
+                        }} style={btnStyle('#378ADD')}>Reset Buzz</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            })()}
+
+            {/* All celebs sorted by buzz */}
+            <div style={{ marginTop: 24 }}>
+              <div style={{ fontSize: 12, color: '#888', fontFamily: "'DM Mono', monospace", marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                All celebs by buzz score
+              </div>
+              {[...allCelebs]
+                .sort((a, b) => (state.buzz[a.id] || 0) - (state.buzz[b.id] || 0))
+                .map(c => {
+                  const buzz = Math.round(state.buzz[c.id] || 0)
+                  const color = buzz < 15 ? '#ff4455' : buzz < 25 ? '#ff8c00' : buzz < 50 ? '#888' : '#00d084'
+                  return (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <span style={{ fontSize: 16 }}>{c.emoji}</span>
+                      <span style={{ flex: 1, fontSize: 12, color: '#f0ede8', fontFamily: "'Syne', sans-serif" }}>{c.name}</span>
+                      <div style={{ width: 100, height: 4, background: '#1a1a1a', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${buzz}%`, background: color, borderRadius: 2, transition: 'width 1s ease' }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color, width: 40, textAlign: 'right' }}>{buzz}/100</span>
+                      {buzz < 25 && (
+                        <button onClick={() => { onDelist(c.id, true); showToast(`${c.name} delisted`) }} style={{ ...btnStyle('#ff4455'), padding: '3px 8px', fontSize: 10 }}>Delist</button>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        )}
+
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
@@ -527,4 +612,53 @@ export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemo
       )}
     </div>
   )
+}
+
+// Helper — get celebs in warning territory (buzz < 25)
+function getDelistWarnings(state, allCelebs) {
+  return allCelebs
+    .filter(c => (state.buzz[c.id] || 0) < 25)
+    .map(c => ({
+      celeb: c,
+      buzz:     state.buzz[c.id] || 0,
+      price:    state.prices[c.id] || 0,
+      holdings: state.holdings[c.id]?.qty || 0,
+    }))
+    .sort((a, b) => a.buzz - b.buzz)
+}
+
+// Helper — get all active celeb objects from state
+function getAllCelebsFromState(state) {
+  const allKnown = [
+    { id:'tayswift', name:'Taylor Swift', emoji:'🎤', sector:'Music', basePrice:22, volatility:0.035, buzzBase:88 },
+    { id:'beyonce', name:'Beyoncé', emoji:'👑', sector:'Music', basePrice:28, volatility:0.030, buzzBase:85 },
+    { id:'adele', name:'Adele', emoji:'🎵', sector:'Music', basePrice:19, volatility:0.025, buzzBase:78 },
+    { id:'edsheeran', name:'Ed Sheeran', emoji:'🎸', sector:'Music', basePrice:16, volatility:0.028, buzzBase:75 },
+    { id:'dualipa', name:'Dua Lipa', emoji:'💃', sector:'Music', basePrice:14, volatility:0.012, buzzBase:80 },
+    { id:'samsmith', name:'Sam Smith', emoji:'🎼', sector:'Music', basePrice:13, volatility:0.018, buzzBase:68 },
+    { id:'tomholland', name:'Tom Holland', emoji:'🕷️', sector:'Film & TV', basePrice:13, volatility:0.012, buzzBase:76 },
+    { id:'emmastone', name:'Emma Stone', emoji:'🎬', sector:'Film & TV', basePrice:20, volatility:0.016, buzzBase:70 },
+    { id:'oliviacolman', name:'Olivia Colman', emoji:'🏆', sector:'Film & TV', basePrice:17.5, volatility:0.020, buzzBase:65 },
+    { id:'idriselba', name:'Idris Elba', emoji:'🎭', sector:'Film & TV', basePrice:12.5, volatility:0.014, buzzBase:67 },
+    { id:'judidench', name:'Judi Dench', emoji:'🎩', sector:'Film & TV', basePrice:12, volatility:0.022, buzzBase:62 },
+    { id:'barrykeoghan', name:'Barry Keoghan', emoji:'🌟', sector:'Film & TV', basePrice:11.5, volatility:0.028, buzzBase:64 },
+    { id:'lewishamilton', name:'Lewis Hamilton', emoji:'🏎️', sector:'Sport', basePrice:21.5, volatility:0.036, buzzBase:77 },
+    { id:'davebeckham', name:'David Beckham', emoji:'⚽', sector:'Sport', basePrice:21, volatility:0.028, buzzBase:74 },
+    { id:'bukayosaka', name:'Bukayo Saka', emoji:'🦊', sector:'Sport', basePrice:21, volatility:0.038, buzzBase:78 },
+    { id:'bellingham', name:'Jude Bellingham', emoji:'⚽', sector:'Sport', basePrice:23.5, volatility:0.042, buzzBase:82 },
+    { id:'andymurray', name:'Andy Murray', emoji:'🎾', sector:'Sport', basePrice:17, volatility:0.028, buzzBase:68 },
+    { id:'benstokes', name:'Ben Stokes', emoji:'🏏', sector:'Sport', basePrice:12.5, volatility:0.024, buzzBase:65 },
+    { id:'caitlinclark', name:'Caitlin Clark', emoji:'🏀', sector:'Sport', basePrice:19.5, volatility:0.048, buzzBase:83 },
+    { id:'maxverstappen', name:'Max Verstappen', emoji:'🏁', sector:'Sport', basePrice:22, volatility:0.038, buzzBase:76 },
+    { id:'keirmstarmer', name:'Keir Starmer', emoji:'🏛️', sector:'Politics', basePrice:14, volatility:0.048, buzzBase:80 },
+    { id:'trump', name:'Donald Trump', emoji:'🇺🇸', sector:'Politics', basePrice:35, volatility:0.085, buzzBase:95 },
+    { id:'albanese', name:'Anthony Albanese', emoji:'🇦🇺', sector:'Politics', basePrice:13, volatility:0.042, buzzBase:74 },
+    { id:'nigelfar', name:'Nigel Farage', emoji:'🍺', sector:'Politics', basePrice:12, volatility:0.065, buzzBase:78 },
+    { id:'princewilliam', name:'Prince William', emoji:'🎩', sector:'Royals', basePrice:18, volatility:0.020, buzzBase:72 },
+    { id:'harryprince', name:'Prince Harry', emoji:'🤴', sector:'Royals', basePrice:15.5, volatility:0.055, buzzBase:82 },
+    { id:'elonmusk', name:'Elon Musk', emoji:'🚀', sector:'Tech', basePrice:31, volatility:0.075, buzzBase:92 },
+  ]
+  return state.active
+    .map(id => state.customCelebs?.[id] || allKnown.find(c => c.id === id))
+    .filter(Boolean)
 }
