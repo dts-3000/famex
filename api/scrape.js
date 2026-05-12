@@ -198,12 +198,12 @@ module.exports = async function handler(req, res) {
     const topHeadlines = []
     const seen = new Set()
 
-    results.forEach(({ id, articles }) => {
+    results.forEach(({ id, totalResults, articles }) => {
       articles.forEach(a => {
         if (a.title && !a.title.includes('[Removed]') && !seen.has(a.title)) {
           seen.add(a.title)
           allTitles.push(a.title)
-          topHeadlines.push({ ...a, celebId: id })
+          topHeadlines.push({ ...a, celebId: id, mentions: totalResults })
         }
       })
     })
