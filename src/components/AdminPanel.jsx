@@ -101,7 +101,7 @@ function getAllCelebsFromState(state) {
     .filter(Boolean)
 }
 
-export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemoveCeleb, onUpdateCeleb, onMarketEvent, onDelist, onClose }) {
+export default function AdminPanel({ state, activeCelebs = [], suggestions = [], onAddCeleb, onRemoveCeleb, onUpdateCeleb, onMarketEvent, onDelist, onClose }) {
   const props = { suggestions }
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
@@ -138,7 +138,7 @@ export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemo
   }
 
   const startEdit = (id) => {
-    const allCelebs = getAllCelebsFromState(state)
+    const allCelebs = activeCelebs.length ? activeCelebs : getAllCelebsFromState(state)
     const c = allCelebs.find(x => x.id === id)
     if (!c) return
     setEditingId(id)
@@ -154,9 +154,9 @@ export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemo
   const fireEvent = () => {
     if (!eventTarget) { showToast('Select a celebrity'); return }
     const headline = eventHeadline.trim() ||
-      (eventType === 'boom' ? `🚀 ${getAllCelebsFromState(state).find(c=>c.id===eventTarget)?.name} goes viral — shares surge!` :
-       eventType === 'crash' ? `💥 ${getAllCelebsFromState(state).find(c=>c.id===eventTarget)?.name} in crisis — shares plummet!` :
-       `📰 Breaking: ${getAllCelebsFromState(state).find(c=>c.id===eventTarget)?.name} in the news`)
+      (eventType === 'boom' ? `🚀 ${activeCelebs.find(c=>c.id===eventTarget)?.name} goes viral — shares surge!` :
+       eventType === 'crash' ? `💥 ${activeCelebs.find(c=>c.id===eventTarget)?.name} in crisis — shares plummet!` :
+       `📰 Breaking: ${activeCelebs.find(c=>c.id===eventTarget)?.name} in the news`)
     onMarketEvent(eventTarget, eventType, headline)
     setEventHeadline('')
     showToast(`🎯 Event fired!`)
@@ -218,7 +218,7 @@ export default function AdminPanel({ state, suggestions = [], onAddCeleb, onRemo
     )
   }
 
-  const allCelebs = getAllCelebsFromState(state)
+  const allCelebs = activeCelebs.length ? activeCelebs : getAllCelebsFromState(state)
 
   const sectionBtn = (id, label) => (
     <button key={id} onClick={() => setActiveSection(id)} style={{
