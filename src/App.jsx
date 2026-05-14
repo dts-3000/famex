@@ -37,6 +37,10 @@ function loadSave() {
         buzzPrev:       { ...fresh.buzzPrev,       ...parsed.buzzPrev },
         holdings:       { ...fresh.holdings,       ...parsed.holdings },
         delistWarnings: { ...fresh.delistWarnings, ...parsed.delistWarnings },
+        volume:         { ...fresh.volume,         ...(parsed.volume || {}) },
+        customCelebs:   { ...(parsed.customCelebs || {}) },
+        // Restore active list — includes any admin-added celebs
+        active:         parsed.active || fresh.active,
       }
     }
   } catch (e) { console.warn('Could not load save:', e) }
@@ -50,7 +54,6 @@ export default function App() {
   const [countdown, setCountdown] = useState(UPDATE_INTERVAL)
   const [toast, setToast] = useState({ message: '', type: '' })
   const [showAdmin, setShowAdmin] = useState(false)
-  const [customCelebDefs, setCustomCelebDefs] = useState({})
   const [lastSaved, setLastSaved] = useState(null)
   const [lastScraped, setLastScraped] = useState(null)
   const [scraping, setScraping] = useState(false)
@@ -68,13 +71,19 @@ export default function App() {
 
   // Trade meta for badge tracking
   const tradeMeta = useRef({
-    totalTrades: 0,
-    bestSellPct: 0,
-    longestHold: 0,
-    boughtLowBuzz: false,
-    heldThroughCrash: false,
-    ownedDelisted: false,
-    consecutiveDays: 1,
+    totalTrades:         0,
+    bestSellPct:         0,
+    longestHold:         0,
+    biggestTradePct:     0,
+    lossCount:           0,
+    boughtLowBuzz:       false,
+    boughtAtLow:         false,
+    heldThroughCrash:    false,
+    ownedDelisted:       false,
+    boughtAfterBoom:     false,
+    tradedAfterMidnight: false,
+    tradedBeforeSix:     false,
+    consecutiveDays:     1,
   })
 
   const stateRef = useRef(state)
@@ -192,6 +201,21 @@ export default function App() {
       tradeMeta.current.totalTrades++
       if ((prev.buzz[id] || 50) < 20) tradeMeta.current.boughtLowBuzz = true
 
+      // All in — check if this trade is 90%+ of cash
+      const tradePct = (total / prev.cash) * 100
+      if (tradePct > tradeMeta.current.biggestTradePct) tradeMeta.current.biggestTradePct = tradePct
+
+      // Time-based badges
+      const hour = new Date().getHours()
+      if (hour >= 0 && hour < 6) tradeMeta.current.tradedBeforeSix = true
+      if (hour === 0 || hour === 23) tradeMeta.current.tradedAfterMidnight = true
+
+      // Riding the wave — bought within 10 ticks (100s) of a Boom on same celeb
+      if (tradeMeta.current.lastBoomId === id &&
+          Date.now() - (tradeMeta.current.lastBoomTick || 0) < 100000) {
+        tradeMeta.current.boughtAfterBoom = true
+      }
+
       const impacted = applyTradeImpact(prev, id, qty, true)
       const next = { ...impacted, cash: impacted.cash - total, holdings: { ...impacted.holdings, [id]: { qty: h.qty + qty, avgCost: newAvg } } }
       checkAndAwardBadges(next)
@@ -212,6 +236,12 @@ export default function App() {
       tradeMeta.current.totalTrades++
       const pct = h.avgCost > 0 ? ((price - h.avgCost) / h.avgCost) * 100 : 0
       if (pct > tradeMeta.current.bestSellPct) tradeMeta.current.bestSellPct = pct
+      if (pct < 0) tradeMeta.current.lossCount = (tradeMeta.current.lossCount || 0) + 1
+
+      // Time-based badges
+      const hour = new Date().getHours()
+      if (hour >= 0 && hour < 6) tradeMeta.current.tradedBeforeSix = true
+      if (hour === 0 || hour === 23) tradeMeta.current.tradedAfterMidnight = true
 
       const impacted = applyTradeImpact(prev, id, qty, false)
       const next = { ...impacted, cash: impacted.cash + total, holdings: { ...impacted.holdings, [id]: { qty: h.qty - qty, avgCost: h.qty - qty === 0 ? 0 : h.avgCost } } }
@@ -226,7 +256,6 @@ export default function App() {
   }, [state.holdings])
 
   const handleAddCeleb = useCallback((celeb) => {
-    setCustomCelebDefs(prev => ({ ...prev, [celeb.id]: celeb }))
     setState(prev => ({
       ...prev,
       active: [...prev.active, celeb.id],
@@ -236,6 +265,7 @@ export default function App() {
       buzzPrev: { ...prev.buzzPrev, [celeb.id]: celeb.buzzBase },
       delistWarnings: { ...prev.delistWarnings, [celeb.id]: 0 },
       holdings: { ...prev.holdings, [celeb.id]: { qty: 0, avgCost: 0 } },
+      volume: { ...prev.volume, [celeb.id]: [] },
       customCelebs: { ...(prev.customCelebs || {}), [celeb.id]: celeb },
       news: [{ headline: `🆕 ${celeb.name} has joined FameX!`, pub: 'FameX', time: new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }), dir: 1, id: Date.now() }, ...prev.news],
     }))
@@ -268,6 +298,11 @@ export default function App() {
     if (eventType === 'crash' || eventType === 'scandal') {
       const holdings = stateRef.current.holdings
       if (holdings[id]?.qty > 0) tradeMeta.current.heldThroughCrash = true
+    }
+    if (eventType === 'boom' || eventType === 'surge') {
+      // Mark that a boom just fired — next buy on this celeb triggers riding_the_wave
+      tradeMeta.current.lastBoomId = id
+      tradeMeta.current.lastBoomTick = Date.now()
     }
     setState(prev => {
       const currentBuzz = prev.buzz[id] || 50
@@ -536,7 +571,7 @@ export default function App() {
 
       {showAdmin && (
         <AdminPanel
-          state={{ ...state, customCelebs: { ...state.customCelebs, ...customCelebDefs } }}
+          state={state}
           activeCelebs={activeCelebs}
           suggestions={suggestions}
           onAddCeleb={handleAddCeleb}
