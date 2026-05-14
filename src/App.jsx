@@ -537,6 +537,7 @@ export default function App() {
       {showAdmin && (
         <AdminPanel
           state={{ ...state, customCelebs: { ...state.customCelebs, ...customCelebDefs } }}
+          activeCelebs={activeCelebs}
           suggestions={suggestions}
           onAddCeleb={handleAddCeleb}
           onRemoveCeleb={handleRemoveCeleb}
