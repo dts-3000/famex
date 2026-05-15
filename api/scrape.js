@@ -33,7 +33,7 @@ const CELEB_QUERIES = [
   ['billieeilish',   'Billie Eilish'],
   ['arianagrande',   'Ariana Grande'],
   ['harrystyles',    'Harry Styles'],
-  ['drake',          'Drake rapper'],
+  ['tomcruise',          'Tom Cruise'],
   ['rihanna',        'Rihanna'],
   ['kanyewest',      'Kanye West'],
   ['ladygaga',       'Lady Gaga'],
@@ -68,7 +68,7 @@ const CELEB_QUERIES = [
   ['kyliemin',       'Kylie Minogue'],
   ['zendaya',        'Zendaya'],
   ['timcook',        'Tim Cook Apple'],
-  ['serenaswilliams','Serena Williams'],
+  ['sydneysweeney', 'Sydney Sweeney'],
   ['tigerwoods',     'Tiger Woods'],
   ['tombrady',       'Tom Brady'],
   ['stephanicurry',  'Stephen Curry'],
@@ -78,17 +78,11 @@ const CELEB_QUERIES = [
   ['mileycyrus',     'Miley Cyrus'],
   ['selenagomez',    'Selena Gomez'],
   ['justinbieber',   'Justin Bieber'],
-  ['kamallaharris',  'Kamala Harris'],
-  ['joebiden',       'Joe Biden'],
-  ['rishi',          'Rishi Sunak'],
-  ['gretathunberg',  'Greta Thunberg'],
   ['leonardodicap',  'Leonardo DiCaprio'],
   ['willsmith',      'Will Smith actor'],
   ['neymarjr',       'Kylian Mbappe'],
-  ['simonebilessp',  'Simone Biles'],
   ['albanese',       'Anthony Albanese'],
-  ['damiansmith',    'Damian Smith'],
-]
+ ]
 
 // High profile celebs fetched every call
 // Others fetched based on day of week to stay within 100/day limit
