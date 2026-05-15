@@ -46,9 +46,6 @@ export const CELEBRITIES = [
   { id:'willsmith',     name:'Will Smith',        emoji:'👋', sector:'Film & TV', basePrice:12.00, volatility:0.065, buzzBase:74, buzzDecayRate:0.90 },
   { id:'nicolekidman',  name:'Nicole Kidman',     emoji:'🌺', sector:'Film & TV', basePrice:12.00, volatility:0.022, buzzBase:70, buzzDecayRate:0.89 },
   { id:'chrishemsworth',name:'Chris Hemsworth',   emoji:'⚡', sector:'Film & TV', basePrice:21.00, volatility:0.030, buzzBase:79, buzzDecayRate:0.90 },
-  { id:'cristianoron',  name:'Cristiano Ronaldo', emoji:'⚽', sector:'Sport',    basePrice:18.00, volatility:0.045, buzzBase:90, buzzDecayRate:0.92 },
-  { id:'leomessi',      name:'Lionel Messi',      emoji:'🐐', sector:'Sport',    basePrice:16.00, volatility:0.040, buzzBase:89, buzzDecayRate:0.92 },
-  { id:'lebron',        name:'LeBron James',      emoji:'👑', sector:'Sport',    basePrice:15.00, volatility:0.042, buzzBase:88, buzzDecayRate:0.92 },
   { id:'usainbolt',     name:'Usain Bolt',        emoji:'⚡', sector:'Sport',    basePrice:12.00, volatility:0.022, buzzBase:70, buzzDecayRate:0.89 },
   { id:'tigerwoods',    name:'Tiger Woods',       emoji:'⛳', sector:'Sport',    basePrice:14.00, volatility:0.038, buzzBase:74, buzzDecayRate:0.89 },
   { id:'neymar',        name:'Neymar',            emoji:'🇧🇷', sector:'Sport',    basePrice:16.00, volatility:0.048, buzzBase:78, buzzDecayRate:0.90 },
@@ -75,24 +72,16 @@ export const CELEBRITIES = [
   { id:'annehathaway',  name:'Anne Hathaway',     emoji:'👒', sector:'Film & TV', basePrice:12.00, volatility:0.026, buzzBase:68, buzzDecayRate:0.89 },
   { id:'reesewitherspoon',name:'Reese Witherspoon',emoji:'🌸',sector:'Film & TV', basePrice:11.00, volatility:0.025, buzzBase:66, buzzDecayRate:0.89 },
   { id:'keanugreeves',  name:'Keanu Reeves',      emoji:'🕶️', sector:'Film & TV', basePrice:14.00, volatility:0.025, buzzBase:70, buzzDecayRate:0.90 },
-  { id:'neymarjr',      name:'Kylian Mbappé',     emoji:'⚡', sector:'Sport',    basePrice:24.00, volatility:0.045, buzzBase:86, buzzDecayRate:0.92 },
-  { id:'erling',        name:'Erling Haaland',    emoji:'🎯', sector:'Sport',    basePrice:22.00, volatility:0.042, buzzBase:84, buzzDecayRate:0.91 },
-  { id:'anthonyjoshua', name:'Anthony Joshua',    emoji:'🥊', sector:'Sport',    basePrice:22.00, volatility:0.048, buzzBase:76, buzzDecayRate:0.90 },
-  { id:'tysonfury',     name:'Tyson Fury',        emoji:'👊', sector:'Sport',    basePrice:24.00, volatility:0.055, buzzBase:78, buzzDecayRate:0.90 },
-  { id:'stephanicurry', name:'Stephen Curry',     emoji:'🏀', sector:'Sport',    basePrice:26.00, volatility:0.038, buzzBase:80, buzzDecayRate:0.90 },
   { id:'vladiputin',    name:'Vladimir Putin',    emoji:'🐻', sector:'Politics', basePrice:16.00, volatility:0.020, buzzBase:80, buzzDecayRate:0.91 },
   { id:'xi',            name:'Xi Jinping',        emoji:'🇨🇳', sector:'Politics', basePrice:15.00, volatility:0.065, buzzBase:75, buzzDecayRate:0.90 },
   { id:'princeedward',  name:'Prince Edward',     emoji:'🎩', sector:'Royals',   basePrice:12.00, volatility:0.015, buzzBase:58, buzzDecayRate:0.87 },
   { id:'princessanne',  name:'Princess Anne',     emoji:'🐴', sector:'Royals',   basePrice:13.00, volatility:0.015, buzzBase:60, buzzDecayRate:0.88 },
-  { id:'paloalto',      name:'Jensen Huang',      emoji:'💻', sector:'Tech',     basePrice:20.00, volatility:0.065, buzzBase:72, buzzDecayRate:0.89 },
-  { id:'jackdorsey',    name:'Jack Dorsey',       emoji:'🐦', sector:'Tech',     basePrice:16.00, volatility:0.045, buzzBase:66, buzzDecayRate:0.89 },
-  { id:'serjobrin',     name:'Sergey Brin',       emoji:'🔍', sector:'Tech',     basePrice:18.00, volatility:0.040, buzzBase:65, buzzDecayRate:0.88 },
-  { id:'nickdaicos',    name:'Nick Daicos',       emoji:'🎯', sector:'Sport',    basePrice:15.00, volatility:0.035, buzzBase:65, buzzDecayRate:0.89 },
-  { id:'baileysmith',   name:'Bailey Smith',      emoji:'🏈', sector:'Sport',    basePrice:15.00, volatility:0.035, buzzBase:62, buzzDecayRate:0.88 },
   { id:'kateperry',     name:'Katy Perry',        emoji:'🐰', sector:'Music',    basePrice:17.00, volatility:0.040, buzzBase:76, buzzDecayRate:0.90 },
   { id:'yunglean',      name:'Yung Lean',         emoji:'⚡', sector:'Music',    basePrice:11.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
   { id:'pepguardiola',  name:'Pep Guardiola',         emoji:'⚡', sector:'Sport', basePrice:15.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
-]
+  { id:'tomcruise',  name:'Tom Cruise',         emoji:'⚡', sector:'Film & TV', basePrice:15.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
+  { id:'sydneysweeney',  name:'Sydney Sweeney',         emoji:'🌺', sector:'Film & TV', basePrice:10.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
+  ]
 
 // Replacement celebs called up when someone is delisted
 export const BENCH = [
