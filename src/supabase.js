@@ -1,48 +1,55 @@
-// src/supabase.js — Supabase client and all database operations
+// src/supabase.js — Supabase client using official REST API
 
-const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL
+const RAW_URL          = (import.meta.env.VITE_SUPABASE_URL || '')
+const SUPABASE_URL      = RAW_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '')
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Lightweight fetch-based Supabase client (no SDK needed)
-async function supabase(path, options = {}) {
-  const url = `${SUPABASE_URL}/rest/v1/${path}`
-  const res = await fetch(url, {
-    headers: {
-      'apikey':        SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type':  'application/json',
-      'Prefer':        options.prefer || 'return=representation',
-      ...options.headers,
-    },
-    ...options,
-  })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Supabase error: ${res.status} ${err}`)
+async function db(table, options = {}) {
+  const { filter = '', method = 'GET', body, prefer } = options
+  const url = `${SUPABASE_URL}/rest/v1/${table}${filter ? '?' + filter : ''}`
+  
+  const headers = {
+    'apikey':        SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type':  'application/json',
   }
+  if (prefer) headers['Prefer'] = prefer
+
+  console.log(`[Supabase] ${method} ${url}`)
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+
   const text = await res.text()
+  if (!res.ok) throw new Error(`Supabase error: ${res.status} ${text}`)
   return text ? JSON.parse(text) : null
 }
 
 // ─── PLAYERS ─────────────────────────────────────────────────────────────────
 
 export async function getPlayer(username) {
-  const data = await supabase(`players?username=eq.${encodeURIComponent(username)}&select=*`)
+  const data = await db('players', { filter: `username=eq.${encodeURIComponent(username)}&select=*` })
   return data?.[0] || null
 }
 
 export async function createPlayer(username) {
-  const data = await supabase('players', {
+  const data = await db('players', {
     method: 'POST',
-    body: JSON.stringify({ username, cash: 100000 }),
+    body: { username, cash: 100000 },
+    prefer: 'return=representation',
   })
-  return data?.[0] || null
+  return Array.isArray(data) ? data[0] : data
 }
 
 export async function updatePlayerCash(playerId, cash) {
-  return supabase(`players?id=eq.${playerId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ cash }),
+  return db('players', {
+    method:  'PATCH',
+    filter:  `id=eq.${playerId}`,
+    body:    { cash },
+    prefer:  'return=minimal',
   })
 }
 
@@ -60,32 +67,24 @@ export async function getOrCreatePlayer(username) {
 // ─── HOLDINGS ────────────────────────────────────────────────────────────────
 
 export async function getHoldings(playerId) {
-  const data = await supabase(`holdings?player_id=eq.${playerId}&select=*`)
-  // Convert array to object keyed by celeb_id
+  const data = await db('holdings', { filter: `player_id=eq.${playerId}&select=*` })
   const holdings = {}
-  ;(data || []).forEach(h => {
-    holdings[h.celeb_id] = { qty: h.qty, avgCost: h.avg_cost }
-  })
+  ;(data || []).forEach(h => { holdings[h.celeb_id] = { qty: h.qty, avgCost: h.avg_cost } })
   return holdings
 }
 
 export async function upsertHolding(playerId, celebId, qty, avgCost) {
-  return supabase('holdings', {
+  return db('holdings', {
     method: 'POST',
-    prefer: 'resolution=merge-duplicates,return=representation',
-    headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify({
-      player_id: playerId,
-      celeb_id:  celebId,
-      qty,
-      avg_cost:  avgCost,
-    }),
+    body:   { player_id: playerId, celeb_id: celebId, qty, avg_cost: avgCost },
+    prefer: 'resolution=merge-duplicates,return=minimal',
   })
 }
 
 export async function deleteHolding(playerId, celebId) {
-  return supabase(`holdings?player_id=eq.${playerId}&celeb_id=eq.${celebId}`, {
+  return db('holdings', {
     method: 'DELETE',
+    filter: `player_id=eq.${playerId}&celeb_id=eq.${celebId}`,
     prefer: 'return=minimal',
   })
 }
@@ -93,102 +92,66 @@ export async function deleteHolding(playerId, celebId) {
 // ─── MARKET ──────────────────────────────────────────────────────────────────
 
 export async function getMarket() {
-  const data = await supabase('market?select=*')
+  const data = await db('market', { filter: 'select=*' })
   const market = {}
-  ;(data || []).forEach(m => {
-    market[m.celeb_id] = { price: m.price, buzz: m.buzz, prevPrice: m.prev_price }
-  })
+  ;(data || []).forEach(m => { market[m.celeb_id] = { price: m.price, buzz: m.buzz } })
   return market
 }
 
-export async function upsertMarketPrice(celebId, price, buzz, prevPrice) {
-  return supabase('market', {
-    method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      celeb_id:   celebId,
-      price,
-      buzz,
-      prev_price: prevPrice,
-      updated_at: new Date().toISOString(),
-    }),
-  })
-}
-
 export async function bulkUpsertMarket(entries) {
-  // entries = [{ celeb_id, price, buzz, prev_price }]
-  return supabase('market', {
+  if (!entries.length) return
+  return db('market', {
     method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(entries.map(e => ({
-      ...e,
-      updated_at: new Date().toISOString(),
-    }))),
+    body:   entries.map(e => ({ ...e, updated_at: new Date().toISOString() })),
+    prefer: 'resolution=merge-duplicates,return=minimal',
   })
 }
 
 // ─── BADGES ──────────────────────────────────────────────────────────────────
 
 export async function getBadges(playerId) {
-  const data = await supabase(`badges?player_id=eq.${playerId}&select=badge_id`)
+  const data = await db('badges', { filter: `player_id=eq.${playerId}&select=badge_id` })
   return (data || []).map(b => b.badge_id)
-}
-
-export async function awardBadge(playerId, badgeId) {
-  try {
-    await supabase('badges', {
-      method: 'POST',
-      headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
-      body: JSON.stringify({ player_id: playerId, badge_id: badgeId }),
-    })
-  } catch (err) {
-    // Ignore duplicate badge errors
-    console.warn('Badge already awarded:', badgeId)
-  }
 }
 
 export async function awardBadges(playerId, badgeIds) {
   if (!badgeIds.length) return
-  return supabase('badges', {
+  return db('badges', {
     method: 'POST',
-    headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
-    body: JSON.stringify(badgeIds.map(badge_id => ({ player_id: playerId, badge_id }))),
+    body:   badgeIds.map(badge_id => ({ player_id: playerId, badge_id })),
+    prefer: 'resolution=ignore-duplicates,return=minimal',
   })
 }
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 
 export async function getLeaderboard() {
-  const data = await supabase('leaderboard?select=*&order=total_worth.desc&limit=50')
+  const data = await db('leaderboard', { filter: 'select=*&order=total_worth.desc&limit=50' })
   return data || []
 }
 
 // ─── REALTIME ────────────────────────────────────────────────────────────────
 
 export function subscribeToMarket(onUpdate) {
-  const ws = new WebSocket(
-    `${SUPABASE_URL.replace('https', 'wss')}/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`
-  )
+  try {
+    const wsUrl = `${SUPABASE_URL.replace('https', 'wss')}/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`
+    const ws = new WebSocket(wsUrl)
 
-  ws.onopen = () => {
-    ws.send(JSON.stringify({
-      topic: 'realtime:public:market',
-      event: 'phx_join',
-      payload: {},
-      ref: '1',
-    }))
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ topic: 'realtime:public:market', event: 'phx_join', payload: {}, ref: '1' }))
+    }
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        if ((msg.event === 'INSERT' || msg.event === 'UPDATE') && msg.payload?.record) {
+          onUpdate(msg.payload.record)
+        }
+      } catch {}
+    }
+    ws.onerror = (err) => console.warn('Realtime WS error:', err)
+    return () => ws.close()
+  } catch (err) {
+    console.warn('Realtime setup failed:', err)
+    return () => {}
   }
-
-  ws.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data)
-      if (msg.event === 'INSERT' || msg.event === 'UPDATE') {
-        onUpdate(msg.payload?.record)
-      }
-    } catch {}
-  }
-
-  ws.onerror = (err) => console.warn('Realtime WS error:', err)
-
-  return () => ws.close()
 }
