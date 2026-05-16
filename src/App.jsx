@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, getVolume, manualDelist, fmt } from './data.js'
 import { checkBadges } from './badges.js'
+import { getOrCreatePlayer, getHoldings, updatePlayerCash, upsertHolding, deleteHolding, getBadges, awardBadges, bulkUpsertMarket, subscribeToMarket } from './supabase.js'
 import Ticker from './components/Ticker.jsx'
 import CelebCard from './components/CelebCard.jsx'
 import Portfolio from './components/Portfolio.jsx'
@@ -9,6 +10,8 @@ import Toast from './components/Toast.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
 import TrophyCabinet from './components/TrophyCabinet.jsx'
 import BadgeUnlock from './components/BadgeUnlock.jsx'
+import UsernamePrompt from './components/UsernamePrompt.jsx'
+import Leaderboard from './components/Leaderboard.jsx'
 
 const SAVE_KEY = 'famex_save'
 const SCRAPE_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
@@ -60,7 +63,12 @@ export default function App() {
   const [suggestions, setSuggestions] = useState([])
   const [newsCountdown, setNewsCountdown] = useState(SCRAPE_INTERVAL_SECS)
   const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState('name') // name | price | buzz | change | volume
+  const [sortBy, setSortBy] = useState('name')
+
+  // Player / multiplayer state
+  const [player, setPlayer] = useState(null)
+  const [playerLoading, setPlayerLoading] = useState(false)
+  const [dbReady, setDbReady] = useState(false)
 
   // Badge state
   const [earnedBadges, setEarnedBadges] = useState(() => {
@@ -89,6 +97,91 @@ export default function App() {
   const stateRef = useRef(state)
   stateRef.current = state
 
+  // ── Player join ──────────────────────────────────────────────────────────
+  const handleJoin = useCallback(async (username) => {
+    setPlayerLoading(true)
+    try {
+      const p = await getOrCreatePlayer(username)
+      if (!p) { showToast('Could not connect — playing offline', 'error'); setDbReady(false); return }
+
+      // Load holdings from DB
+      const dbHoldings = await getHoldings(p.id)
+      const dbBadges   = await getBadges(p.id)
+
+      setState(prev => ({
+        ...prev,
+        cash:     p.cash,
+        holdings: { ...prev.holdings, ...dbHoldings },
+      }))
+      setEarnedBadges(dbBadges)
+      setPlayer(p)
+      setDbReady(true)
+      localStorage.setItem('famex_username', username)
+      showToast(`Welcome back ${username}! 🎉`, 'buy')
+    } catch (err) {
+      console.error('Join error:', err)
+      showToast('Playing offline — DB unavailable', 'error')
+      setDbReady(false)
+    } finally {
+      setPlayerLoading(false)
+    }
+  }, [])
+
+  // Auto-login if username saved
+  useEffect(() => {
+    const saved = localStorage.getItem('famex_username')
+    if (saved) handleJoin(saved)
+  }, [])
+
+  // ── Real-time market sync ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!dbReady) return
+    const unsub = subscribeToMarket((record) => {
+      if (!record) return
+      setState(prev => ({
+        ...prev,
+        prices: { ...prev.prices, [record.celeb_id]: record.price },
+        buzz:   { ...prev.buzz,   [record.celeb_id]: record.buzz  },
+      }))
+    })
+    return unsub
+  }, [dbReady])
+
+  // ── Save holdings to DB on change ───────────────────────────────────────
+  const saveToDB = useCallback(async (newState) => {
+    if (!player || !dbReady) return
+    try {
+      await updatePlayerCash(player.id, newState.cash)
+      // Upsert changed holdings
+      const promises = Object.entries(newState.holdings)
+        .filter(([, h]) => h.qty >= 0)
+        .map(([id, h]) =>
+          h.qty === 0
+            ? deleteHolding(player.id, id)
+            : upsertHolding(player.id, id, h.qty, h.avgCost)
+        )
+      await Promise.allSettled(promises)
+    } catch (err) {
+      console.warn('DB save error:', err)
+    }
+  }, [player, dbReady])
+
+  // ── Push market prices to DB every tick (so all players share prices) ───
+  const pushMarketToDB = useCallback(async (newState) => {
+    if (!dbReady) return
+    try {
+      const entries = newState.active.map(id => ({
+        celeb_id:   id,
+        price:      newState.prices[id] || 0,
+        buzz:       newState.buzz[id] || 0,
+        prev_price: newState.history[id]?.[newState.history[id].length - 2] || newState.prices[id] || 0,
+      }))
+      await bulkUpsertMarket(entries)
+    } catch (err) {
+      console.warn('Market push error:', err)
+    }
+  }, [dbReady])
+
   // Auto-save
   useEffect(() => {
     try {
@@ -107,10 +200,11 @@ export default function App() {
     const { earned, newlyEarned } = checkBadges(newState, earnedBadges, tradeMeta.current)
     if (newlyEarned.length > 0) {
       setEarnedBadges(earned)
+      if (player) awardBadges(player.id, newlyEarned)
       badgeQueue.current = [...badgeQueue.current, ...newlyEarned]
       if (!pendingBadge) setPendingBadge(badgeQueue.current.shift())
     }
-  }, [earnedBadges, pendingBadge])
+  }, [earnedBadges, pendingBadge, player])
 
   // Badge queue processor
   const handleBadgeDone = useCallback(() => {
@@ -176,13 +270,21 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) { setState(s => { const next = tickMarket(s); checkAndAwardBadges(next); return next }); return UPDATE_INTERVAL }
+        if (prev <= 1) {
+          setState(s => {
+            const next = tickMarket(s)
+            checkAndAwardBadges(next)
+            pushMarketToDB(next)
+            return next
+          })
+          return UPDATE_INTERVAL
+        }
         return prev - 1
       })
       setNewsCountdown(prev => prev <= 1 ? SCRAPE_INTERVAL_SECS : prev - 1)
     }, 1000)
     return () => clearInterval(interval)
-  }, [checkAndAwardBadges])
+  }, [checkAndAwardBadges, pushMarketToDB])
 
   const showToast = useCallback((message, type) => setToast({ message, type }), [])
 
@@ -219,9 +321,10 @@ export default function App() {
       const impacted = applyTradeImpact(prev, id, qty, true)
       const next = { ...impacted, cash: impacted.cash - total, holdings: { ...impacted.holdings, [id]: { qty: h.qty + qty, avgCost: newAvg } } }
       checkAndAwardBadges(next)
+      saveToDB(next)
       return next
     })
-  }, [showToast, checkAndAwardBadges])
+  }, [showToast, checkAndAwardBadges, saveToDB])
 
   const handleSell = useCallback((id, qty) => {
     setState(prev => {
@@ -246,9 +349,10 @@ export default function App() {
       const impacted = applyTradeImpact(prev, id, qty, false)
       const next = { ...impacted, cash: impacted.cash + total, holdings: { ...impacted.holdings, [id]: { qty: h.qty - qty, avgCost: h.qty - qty === 0 ? 0 : h.avgCost } } }
       checkAndAwardBadges(next)
+      saveToDB(next)
       return next
     })
-  }, [showToast, checkAndAwardBadges])
+  }, [showToast, checkAndAwardBadges, saveToDB])
 
   const handleDelist = useCallback((id, addReplacement) => {
     setState(prev => manualDelist(prev, id, addReplacement))
@@ -376,6 +480,14 @@ export default function App() {
                 Fame<span style={{ color: 'var(--gold)' }}>X</span>
               </span>
               <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>BETA</span>
+              {player && (
+                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>
+                  👤 {player.username}
+                </span>
+              )}
+              {dbReady && (
+                <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>● live</span>
+              )}
               {scraping && <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--blue)' }}>📡 scraping news...</span>}
               {lastScraped && !scraping && (
                 <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
@@ -454,12 +566,13 @@ export default function App() {
 
       <main style={{ flex: 1, maxWidth: 1200, margin: '0 auto', padding: '20px', width: '100%' }}>
         <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-          {['market', 'portfolio', 'news', 'trophies'].map(t => (
+          {['market', 'portfolio', 'news', 'trophies', 'leaderboard'].map(t => (
             <button key={t} style={tabStyle(t)} onClick={() => setTab(t)}>
-              {t === 'market'    ? 'Market' :
-               t === 'portfolio' ? 'My Portfolio' :
-               t === 'news'      ? `Buzz Feed${state.news.filter(n=>n.real).length > 0 ? ' 📡' : ''}` :
-               `🏆 Trophies${earnedBadges.length > 0 ? ` (${earnedBadges.length})` : ''}`}
+              {t === 'market'      ? 'Market' :
+               t === 'portfolio'   ? 'My Portfolio' :
+               t === 'news'        ? `Buzz Feed${state.news.filter(n=>n.real).length > 0 ? ' 📡' : ''}` :
+               t === 'trophies'    ? `🏆 Trophies${earnedBadges.length > 0 ? ` (${earnedBadges.length})` : ''}` :
+               `🏅 Leaderboard`}
             </button>
           ))}
         </div>
@@ -536,15 +649,26 @@ export default function App() {
           </>
         )}
 
-        {tab === 'portfolio' && <Portfolio holdings={state.holdings} prices={state.prices} activeCelebs={activeCelebs} />}
-        {tab === 'news'      && <NewsFeed news={state.news} />}
-        {tab === 'trophies'  && <TrophyCabinet earnedBadges={earnedBadges} />}
+        {tab === 'portfolio'   && <Portfolio holdings={state.holdings} prices={state.prices} activeCelebs={activeCelebs} />}
+        {tab === 'news'        && <NewsFeed news={state.news} />}
+        {tab === 'trophies'   && <TrophyCabinet earnedBadges={earnedBadges} />}
+        {tab === 'leaderboard' && <Leaderboard currentPlayerId={player?.id} />}
       </main>
 
       <Toast message={toast.message} type={toast.type} onDone={() => setToast({ message: '', type: '' })} />
 
       {/* Badge unlock popup */}
       <BadgeUnlock newBadgeId={pendingBadge} onDone={handleBadgeDone} />
+
+      {/* Username prompt — show if no player yet */}
+      {!player && !playerLoading && (
+        <UsernamePrompt onJoin={handleJoin} loading={playerLoading} />
+      )}
+      {playerLoading && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 14 }}>
+          ⟳ Connecting to FameX...
+        </div>
+      )}
 
       {/* Fixed admin button with warning badge */}
       <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 999 }}>
