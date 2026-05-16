@@ -183,13 +183,9 @@ export function tickMarket(state) {
   const newHistory   = { ...state.history }
   const newBuzz      = { ...state.buzz }
   const newBuzzPrev  = { ...state.buzz }
-  const newDelist    = { ...state.delistWarnings }
   const newNews      = [...state.news]
-  const newActive    = [...state.active]
-  const newBenchUsed = [...state.benchUsed]
   const newHoldings  = { ...state.holdings }
   const newVolume    = { ...state.volume }
-  const tooDelist    = []
   const now          = Date.now()
 
   state.active.forEach(id => {
@@ -210,25 +206,16 @@ export function tickMarket(state) {
     // 4. Price change — buzz + momentum + volume + noise
     const change = calcPriceChange(c, next, prev, volumePressure)
     newPrices[id] = Math.max(0.10, newPrices[id] * (1 + change))
-    newHistory[id] = [...(newHistory[id] || []).slice(-79), newPrices[id]]  // more history for smoother charts
-
-    // 5. Low buzz warning — flag for admin review, NO automatic delist
-    if (next < 25) {
-      newDelist[id] = (newDelist[id] || 0) + 1
-    } else {
-      newDelist[id] = 0
-    }
+    newHistory[id] = [...(newHistory[id] || []).slice(-79), newPrices[id]]
   })
-
-  // NO automatic delistings — admin handles manually
 
   return {
     ...state,
     prices: newPrices, history: newHistory,
     buzz: newBuzz, buzzPrev: newBuzzPrev,
-    holdings: newHoldings, delistWarnings: newDelist,
+    holdings: newHoldings,
     volume: newVolume,
-    active: newActive, benchUsed: newBenchUsed,
+    active: state.active, benchUsed: state.benchUsed,
     news: newNews.slice(0, 60),
   }
 }
