@@ -81,6 +81,7 @@ export const CELEBRITIES = [
   { id:'pepguardiola',  name:'Pep Guardiola',         emoji:'⚡', sector:'Sport', basePrice:15.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
   { id:'tomcruise',  name:'Tom Cruise',         emoji:'⚡', sector:'Film & TV', basePrice:15.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
   { id:'sydneysweeney',  name:'Sydney Sweeney',         emoji:'🌺', sector:'Film & TV', basePrice:10.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
+  { id:'spencerpratt',  name:'Spencer Pratt',         emoji:'CALI', sector:'Politics', basePrice:10.00, volatility:0.045, buzzBase:65, buzzDecayRate:0.89 },
   ]
 
 // Replacement celebs called up when someone is delisted
