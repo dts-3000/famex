@@ -101,10 +101,22 @@ export default function App() {
   const handleJoin = useCallback(async (username) => {
     setPlayerLoading(true)
     try {
-      const p = await getOrCreatePlayer(username)
-      if (!p) { showToast('Could not connect — playing offline', 'error'); setDbReady(false); return }
+      console.log('Joining as:', username)
+      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
+      console.log('Anon key set:', !!import.meta.env.VITE_SUPABASE_ANON_KEY)
 
-      // Load holdings from DB
+      const p = await getOrCreatePlayer(username)
+      console.log('Player result:', p)
+
+      if (!p) {
+        showToast('Could not connect — playing offline', 'error')
+        // Allow playing offline without username prompt
+        setPlayer({ id: null, username, cash: 100000 })
+        setDbReady(false)
+        localStorage.setItem('famex_username', username)
+        return
+      }
+
       const dbHoldings = await getHoldings(p.id)
       const dbBadges   = await getBadges(p.id)
 
@@ -117,11 +129,14 @@ export default function App() {
       setPlayer(p)
       setDbReady(true)
       localStorage.setItem('famex_username', username)
-      showToast(`Welcome back ${username}! 🎉`, 'buy')
+      showToast(`Welcome ${username}! 🎉`, 'buy')
     } catch (err) {
-      console.error('Join error:', err)
-      showToast('Playing offline — DB unavailable', 'error')
+      console.error('Join error:', err.message, err)
+      showToast(`Error: ${err.message} — playing offline`, 'error')
+      // Still let them play offline
+      setPlayer({ id: null, username, cash: 100000 })
       setDbReady(false)
+      localStorage.setItem('famex_username', username)
     } finally {
       setPlayerLoading(false)
     }
@@ -663,11 +678,6 @@ export default function App() {
       {/* Username prompt — show if no player yet */}
       {!player && !playerLoading && (
         <UsernamePrompt onJoin={handleJoin} loading={playerLoading} />
-      )}
-      {playerLoading && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 14 }}>
-          ⟳ Connecting to FameX...
-        </div>
       )}
 
       {/* Fixed admin button with warning badge */}
