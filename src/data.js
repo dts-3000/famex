@@ -50,8 +50,8 @@ export const CELEBRITIES = [
   { id:'tigerwoods',    name:'Tiger Woods',       emoji:'⛳', sector:'Sport',    basePrice:14.00, volatility:0.038, buzzBase:74, buzzDecayRate:0.89 },
   { id:'neymar',        name:'Neymar',            emoji:'🇧🇷', sector:'Sport',    basePrice:16.00, volatility:0.048, buzzBase:78, buzzDecayRate:0.90 },
   { id:'rogerfederer',  name:'Roger Federer',     emoji:'🎾', sector:'Sport',    basePrice:15.00, volatility:0.022, buzzBase:68, buzzDecayRate:0.89 },
-  { id:'volodymyrzel',  name:'Volodymyr Zelensky',emoji:'🇺🇦', sector:'Politics', basePrice:18.00, volatility:0.070, buzzBase:78, buzzDecayRate:0.91 },
-  { id:'princgeorge',   name:'Princess Catherine',emoji:'👸', sector:'Royals',   basePrice:20.00, volatility:0.022, buzzBase:74, buzzDecayRate:0.89 },
+  { id:'zelensky',  name:'Volodymyr Zelensky',emoji:'🇺🇦', sector:'Politics', basePrice:18.00, volatility:0.070, buzzBase:78, buzzDecayRate:0.91 },
+  { id:'princegeorge',   name:'Princess Catherine',emoji:'👸', sector:'Royals',   basePrice:20.00, volatility:0.022, buzzBase:74, buzzDecayRate:0.89 },
   { id:'meghanmarkle',  name:'Meghan Markle',     emoji:'🌻', sector:'Royals',   basePrice:18.00, volatility:0.058, buzzBase:80, buzzDecayRate:0.91 },
   { id:'queencamilla',  name:'Queen Camilla',     emoji:'👑', sector:'Royals',   basePrice:14.00, volatility:0.018, buzzBase:64, buzzDecayRate:0.88 },
   { id:'princeandrew',   name:'Prince Andrew',     emoji:'🎖️', sector:'Royals',   basePrice:10.00, volatility:0.060, buzzBase:62, buzzDecayRate:0.88 },
@@ -66,7 +66,7 @@ export const CELEBRITIES = [
   { id:'merylstreep',   name:'Meryl Streep',      emoji:'🎭', sector:'Film & TV', basePrice:12.00, volatility:0.018, buzzBase:70, buzzDecayRate:0.88 },
   { id:'bradpitt',      name:'Brad Pitt',         emoji:'😎', sector:'Film & TV', basePrice:26.00, volatility:0.035, buzzBase:78, buzzDecayRate:0.90 },
   { id:'angelinajolie', name:'Angelina Jolie',    emoji:'🌺', sector:'Film & TV', basePrice:25.00, volatility:0.032, buzzBase:77, buzzDecayRate:0.90 },
-  { id:'scarjohansoon',        name:'Scarlett Johansson',emoji:'⚡', sector:'Film & TV', basePrice:27.00, volatility:0.030, buzzBase:80, buzzDecayRate:0.90 },
+  { id:'scarjohansson',        name:'Scarlett Johansson',emoji:'⚡', sector:'Film & TV', basePrice:27.00, volatility:0.030, buzzBase:80, buzzDecayRate:0.90 },
   { id:'chrisevans',    name:'Chris Evans',       emoji:'🛡️', sector:'Film & TV', basePrice:15.00, volatility:0.030, buzzBase:76, buzzDecayRate:0.90 },
   { id:'robertdowney',  name:'Robert Downey Jr',  emoji:'🦾', sector:'Film & TV', basePrice:18.00, volatility:0.035, buzzBase:72, buzzDecayRate:0.89 },
   { id:'annehathaway',  name:'Anne Hathaway',     emoji:'👒', sector:'Film & TV', basePrice:12.00, volatility:0.026, buzzBase:68, buzzDecayRate:0.89 },
@@ -85,7 +85,8 @@ export const CELEBRITIES = [
 
 // Replacement celebs called up when someone is delisted
 export const BENCH = [
-  { id:'zendaya',    name:'Zendaya',      emoji:'🌸', sector:'Film & TV', basePrice:21.00, volatility:0.038, buzzBase:80, buzzDecayRate:0.91 },
+  { id:'tommyjohnson',    name:'Tommy Johnson',      emoji:'🌸', sector:'Politics', basePrice:11.00, volatility:0.048, buzzBase:70, buzzDecayRate:0.91 },
+   { id:'zendaya',    name:'Zendaya',      emoji:'🌸', sector:'Film & TV', basePrice:21.00, volatility:0.038, buzzBase:80, buzzDecayRate:0.91 },
   { id:'oscarisaac', name:'Oscar Isaac',  emoji:'🎬', sector:'Film & TV', basePrice:16.00, volatility:0.030, buzzBase:65, buzzDecayRate:0.88 },
   { id:'matildaman', name:'Matilda Mann', emoji:'🎵', sector:'Music',     basePrice:12.00, volatility:0.040, buzzBase:60, buzzDecayRate:0.88 },
 ]
