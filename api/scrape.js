@@ -116,6 +116,7 @@ const CELEB_QUERIES = [
   ['princeandrew',       'Prince Andrew'],
   ['princgeorge',       'Princess Catherine'],
   ['vladiputin',        'Vladimir Putin'],
+  ['spencerpratt',        'Spencer Pratt'],
 ]
 
 // High profile celebs fetched every call
