@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { SECTORS, UPDATE_INTERVAL, STARTING_CASH, initState, tickMarket, applyTradeImpact, getAllCelebs, getVolume, manualDelist, fmt } from './data.js'
 import { checkBadges } from './badges.js'
-import { getOrCreatePlayer, getHoldings, updatePlayerCash, upsertHolding, deleteHolding, getBadges, awardBadges, bulkUpsertMarket, subscribeToMarket } from './supabase.js'
+import { getOrCreatePlayer, getHoldings, updatePlayerCash, upsertHolding, deleteHolding, getBadges, awardBadges, bulkUpsertMarket, getMarket, subscribeToMarket } from './supabase.js'
 import Ticker from './components/Ticker.jsx'
 import CelebCard from './components/CelebCard.jsx'
 import Portfolio from './components/Portfolio.jsx'
@@ -119,12 +119,24 @@ export default function App() {
 
       const dbHoldings = await getHoldings(p.id)
       const dbBadges   = await getBadges(p.id)
+      const dbMarket   = await getMarket()
 
-      setState(prev => ({
-        ...prev,
-        cash:     p.cash,
-        holdings: { ...prev.holdings, ...dbHoldings },
-      }))
+      setState(prev => {
+        const newPrices = { ...prev.prices }
+        const newBuzz   = { ...prev.buzz }
+        // Apply DB market prices — overrides local state so all players sync
+        Object.entries(dbMarket).forEach(([id, m]) => {
+          if (m.price > 0) newPrices[id] = m.price
+          if (m.buzz  > 0) newBuzz[id]   = m.buzz
+        })
+        return {
+          ...prev,
+          cash:     p.cash,
+          prices:   newPrices,
+          buzz:     newBuzz,
+          holdings: { ...prev.holdings, ...dbHoldings },
+        }
+      })
       setEarnedBadges(dbBadges)
       setPlayer(p)
       setDbReady(true)
