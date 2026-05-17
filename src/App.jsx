@@ -28,35 +28,31 @@ const EVENT_IMPACTS = {
 
 function loadSave() {
   try {
+    const fresh = initState()
     const saved = localStorage.getItem(SAVE_KEY)
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      const fresh = initState()
+    if (!saved) return fresh
+    const parsed = JSON.parse(saved)
+    if (!parsed || typeof parsed !== 'object') return fresh
 
-      // Fix any zero/missing prices from old delist events
-      const fixedPrices = { ...fresh.prices }
-      if (parsed.prices) {
-        Object.entries(parsed.prices).forEach(([id, price]) => {
-          fixedPrices[id] = (!price || price <= 0) ? (fresh.prices[id] || 10) : price
-        })
-      }
-
-      return {
-        ...fresh,
-        cash:         parsed.cash ?? fresh.cash,
-        prices:       fixedPrices,
-        history:      { ...fresh.history,  ...(parsed.history  || {}) },
-        buzz:         { ...fresh.buzz,     ...(parsed.buzz     || {}) },
-        buzzPrev:     { ...fresh.buzzPrev, ...(parsed.buzzPrev || {}) },
-        holdings:     { ...fresh.holdings, ...(parsed.holdings || {}) },
-        volume:       { ...fresh.volume,   ...(parsed.volume   || {}) },
-        customCelebs: { ...(parsed.customCelebs || {}) },
-        active:       fresh.active, // always restore full celeb list
-        news:         parsed.news || [],
-      }
+    // Always start from fresh state, only overlay saved values
+    return {
+      ...fresh,
+      cash:         (typeof parsed.cash === 'number' && parsed.cash > 0) ? parsed.cash : fresh.cash,
+      prices:       fresh.prices,   // always use fresh prices — DB will sync
+      history:      fresh.history,  // always use fresh history
+      buzz:         fresh.buzz,     // always use fresh buzz — scraper will sync
+      buzzPrev:     fresh.buzzPrev,
+      holdings:     { ...fresh.holdings, ...(parsed.holdings || {}) },
+      volume:       fresh.volume,
+      active:       fresh.active,   // always all celebs active
+      customCelebs: parsed.customCelebs || {},
+      news:         Array.isArray(parsed.news) ? parsed.news.slice(0, 20) : [],
+      benchUsed:    [],
     }
-  } catch (e) { console.warn('Could not load save:', e) }
-  return initState()
+  } catch (e) {
+    console.warn('Save corrupted, starting fresh:', e)
+    return initState()
+  }
 }
 
 export default function App() {
