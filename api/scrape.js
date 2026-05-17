@@ -122,7 +122,7 @@ const CELEB_QUERIES = [
 // High profile celebs fetched every call
 // Others fetched based on day of week to stay within 100/day limit
 const HIGH_PROFILE = ['donaldtrump', 'elonmusk', 'taylorswift', 'keirmstarmer', 
-  'anthonyalbanese', 'samaltman', 'nigelfarage', 'lewishamilton', 'markzuckerberg',
+  'anthonyalbanese', 'samaltman', 'nigelfarage', 'kingcharles', 'markzuckerberg',
   'princewilliam', 'harryprince', 'judebellingham', 'pepguardiola', 'samaltman']
 
 function mentionsToBuzz(totalResults) {
