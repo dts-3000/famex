@@ -28,31 +28,26 @@ const EVENT_IMPACTS = {
 
 function loadSave() {
   try {
-    const fresh = initState()
     const saved = localStorage.getItem(SAVE_KEY)
-    if (!saved) return fresh
-    const parsed = JSON.parse(saved)
-    if (!parsed || typeof parsed !== 'object') return fresh
-
-    // Always start from fresh state, only overlay saved values
-    return {
-      ...fresh,
-      cash:         (typeof parsed.cash === 'number' && parsed.cash > 0) ? parsed.cash : fresh.cash,
-      prices:       fresh.prices,   // always use fresh prices — DB will sync
-      history:      fresh.history,  // always use fresh history
-      buzz:         fresh.buzz,     // always use fresh buzz — scraper will sync
-      buzzPrev:     fresh.buzzPrev,
-      holdings:     { ...fresh.holdings, ...(parsed.holdings || {}) },
-      volume:       fresh.volume,
-      active:       fresh.active,   // always all celebs active
-      customCelebs: parsed.customCelebs || {},
-      news:         Array.isArray(parsed.news) ? parsed.news.slice(0, 20) : [],
-      benchUsed:    [],
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      const fresh = initState()
+      return {
+        ...fresh, ...parsed,
+        prices:         { ...fresh.prices,         ...parsed.prices },
+        history:        { ...fresh.history,        ...parsed.history },
+        buzz:           { ...fresh.buzz,           ...parsed.buzz },
+        buzzPrev:       { ...fresh.buzzPrev,       ...parsed.buzzPrev },
+        holdings:       { ...fresh.holdings,       ...parsed.holdings },
+        delistWarnings: { ...fresh.delistWarnings, ...parsed.delistWarnings },
+        volume:         { ...fresh.volume,         ...(parsed.volume || {}) },
+        customCelebs:   { ...(parsed.customCelebs || {}) },
+        // Restore active list — includes any admin-added celebs
+        active:         parsed.active || fresh.active,
+      }
     }
-  } catch (e) {
-    console.warn('Save corrupted, starting fresh:', e)
-    return initState()
-  }
+  } catch (e) { console.warn('Could not load save:', e) }
+  return initState()
 }
 
 export default function App() {
@@ -699,7 +694,7 @@ export default function App() {
 
       {/* Fixed admin button with warning badge */}
       <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 999 }}>
-        {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 15).length > 0 && (
+        {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 25).length > 0 && (
           <div style={{
             position: 'absolute', top: -8, right: -8,
             background: '#ff4455', color: '#fff', borderRadius: '50%',
@@ -707,7 +702,7 @@ export default function App() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'var(--font-mono)', zIndex: 1000,
           }}>
-            {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 15).length}
+            {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 25).length}
           </div>
         )}
         <button onClick={() => setShowAdmin(true)} style={{
