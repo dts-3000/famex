@@ -33,24 +33,26 @@ function loadSave() {
       const parsed = JSON.parse(saved)
       const fresh = initState()
 
-      // Fix any zero prices from old delist events
+      // Fix any zero/missing prices from old delist events
       const fixedPrices = { ...fresh.prices }
-      Object.entries({ ...fresh.prices, ...parsed.prices }).forEach(([id, price]) => {
-        const celeb = fresh.prices[id]
-        fixedPrices[id] = (!price || price <= 0) ? (celeb || 10) : price
-      })
+      if (parsed.prices) {
+        Object.entries(parsed.prices).forEach(([id, price]) => {
+          fixedPrices[id] = (!price || price <= 0) ? (fresh.prices[id] || 10) : price
+        })
+      }
 
       return {
-        ...fresh, ...parsed,
-        // Always restore ALL celebs as active — no auto-delist
-        active:   fresh.active,
-        prices:   fixedPrices,
-        history:  { ...fresh.history,  ...parsed.history },
-        buzz:     { ...fresh.buzz,     ...parsed.buzz },
-        buzzPrev: { ...fresh.buzzPrev, ...parsed.buzzPrev },
-        holdings: { ...fresh.holdings, ...parsed.holdings },
-        volume:   { ...fresh.volume,   ...(parsed.volume || {}) },
+        ...fresh,
+        cash:         parsed.cash ?? fresh.cash,
+        prices:       fixedPrices,
+        history:      { ...fresh.history,  ...(parsed.history  || {}) },
+        buzz:         { ...fresh.buzz,     ...(parsed.buzz     || {}) },
+        buzzPrev:     { ...fresh.buzzPrev, ...(parsed.buzzPrev || {}) },
+        holdings:     { ...fresh.holdings, ...(parsed.holdings || {}) },
+        volume:       { ...fresh.volume,   ...(parsed.volume   || {}) },
         customCelebs: { ...(parsed.customCelebs || {}) },
+        active:       fresh.active, // always restore full celeb list
+        news:         parsed.news || [],
       }
     }
   } catch (e) { console.warn('Could not load save:', e) }
