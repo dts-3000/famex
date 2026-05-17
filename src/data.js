@@ -125,20 +125,19 @@ const VOLUME_WEIGHT   = 0.15          // Trade volume pressure
 const NOISE_WEIGHT    = 0.10          // Random noise
 
 export function initState() {
-  const prices = {}, history = {}, buzz = {}, buzzPrev = {}, holdings = {}, delistWarnings = {}, volume = {}
+  const prices = {}, history = {}, buzz = {}, buzzPrev = {}, holdings = {}, volume = {}
   CELEBRITIES.forEach(c => {
-    prices[c.id]         = c.basePrice
-    history[c.id]        = Array(20).fill(null).map(() => c.basePrice * (1 + (Math.random() - 0.5) * 0.06))
-    buzz[c.id]           = c.buzzBase + (Math.random() - 0.5) * 6
-    buzzPrev[c.id]       = buzz[c.id]
-    holdings[c.id]       = { qty: 0, avgCost: 0 }
-    delistWarnings[c.id] = 0
-    volume[c.id]         = []   // Array of { qty, isBuy, time }
+    prices[c.id]   = c.basePrice
+    history[c.id]  = Array(20).fill(null).map(() => c.basePrice * (1 + (Math.random() - 0.5) * 0.06))
+    buzz[c.id]     = c.buzzBase + (Math.random() - 0.5) * 6
+    buzzPrev[c.id] = buzz[c.id]
+    holdings[c.id] = { qty: 0, avgCost: 0 }
+    volume[c.id]   = []
   })
   return {
     cash: STARTING_CASH,
     prices, history, buzz, buzzPrev,
-    holdings, delistWarnings, volume,
+    holdings, volume,
     active: CELEBRITIES.map(c => c.id),
     benchUsed: [],
     news: [],

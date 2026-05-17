@@ -32,18 +32,25 @@ function loadSave() {
     if (saved) {
       const parsed = JSON.parse(saved)
       const fresh = initState()
+
+      // Fix any zero prices from old delist events
+      const fixedPrices = { ...fresh.prices }
+      Object.entries({ ...fresh.prices, ...parsed.prices }).forEach(([id, price]) => {
+        const celeb = fresh.prices[id]
+        fixedPrices[id] = (!price || price <= 0) ? (celeb || 10) : price
+      })
+
       return {
         ...fresh, ...parsed,
-        prices:         { ...fresh.prices,         ...parsed.prices },
-        history:        { ...fresh.history,        ...parsed.history },
-        buzz:           { ...fresh.buzz,           ...parsed.buzz },
-        buzzPrev:       { ...fresh.buzzPrev,       ...parsed.buzzPrev },
-        holdings:       { ...fresh.holdings,       ...parsed.holdings },
-        delistWarnings: { ...fresh.delistWarnings, ...parsed.delistWarnings },
-        volume:         { ...fresh.volume,         ...(parsed.volume || {}) },
-        customCelebs:   { ...(parsed.customCelebs || {}) },
-        // Restore active list — includes any admin-added celebs
-        active:         parsed.active || fresh.active,
+        // Always restore ALL celebs as active — no auto-delist
+        active:   fresh.active,
+        prices:   fixedPrices,
+        history:  { ...fresh.history,  ...parsed.history },
+        buzz:     { ...fresh.buzz,     ...parsed.buzz },
+        buzzPrev: { ...fresh.buzzPrev, ...parsed.buzzPrev },
+        holdings: { ...fresh.holdings, ...parsed.holdings },
+        volume:   { ...fresh.volume,   ...(parsed.volume || {}) },
+        customCelebs: { ...(parsed.customCelebs || {}) },
       }
     }
   } catch (e) { console.warn('Could not load save:', e) }
@@ -694,7 +701,7 @@ export default function App() {
 
       {/* Fixed admin button with warning badge */}
       <div style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 999 }}>
-        {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 25).length > 0 && (
+        {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 15).length > 0 && (
           <div style={{
             position: 'absolute', top: -8, right: -8,
             background: '#ff4455', color: '#fff', borderRadius: '50%',
@@ -702,7 +709,7 @@ export default function App() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'var(--font-mono)', zIndex: 1000,
           }}>
-            {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 25).length}
+            {activeCelebs.filter(c => (state.buzz[c.id] || 0) < 15).length}
           </div>
         )}
         <button onClick={() => setShowAdmin(true)} style={{
