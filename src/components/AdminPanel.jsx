@@ -592,7 +592,7 @@ export default function AdminPanel({ state, activeCelebs = [], suggestions = [],
                         <div style={{ height: '100%', width: `${buzz}%`, background: color, borderRadius: 2, transition: 'width 1s ease' }} />
                       </div>
                       <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color, width: 40, textAlign: 'right' }}>{buzz}/100</span>
-                      {buzz < 25 && (
+                      {buzz < 15 && (
                         <button onClick={() => { onDelist(c.id, true); showToast(`${c.name} delisted`) }} style={{ ...btnStyle('#ff4455'), padding: '3px 8px', fontSize: 10 }}>Delist</button>
                       )}
                     </div>
@@ -614,10 +614,10 @@ export default function AdminPanel({ state, activeCelebs = [], suggestions = [],
   )
 }
 
-// Helper — get celebs in warning territory (buzz < 25)
+// Helper — get celebs in warning territory (buzz < 15 — very low)
 function getDelistWarnings(state, allCelebs) {
   return allCelebs
-    .filter(c => (state.buzz[c.id] || 0) < 25)
+    .filter(c => (state.buzz[c.id] || 0) < 15)
     .map(c => ({
       celeb: c,
       buzz:     state.buzz[c.id] || 0,
