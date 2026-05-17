@@ -80,7 +80,8 @@ export const CELEBRITIES = [
   { id:'nigelfar',      name:'Nigel Farage',      emoji:'🍺', sector:'Politics', basePrice:12.00, volatility:0.065, buzzBase:42, buzzDecayRate:0.90 }, // ~100-300/wk
   { id:'volodymyrzel',  name:'Volodymyr Zelensky',emoji:'🇺🇦', sector:'Politics', basePrice:18.00, volatility:0.070, buzzBase:44, buzzDecayRate:0.91 }, // ~100-300/wk
   { id:'vladiputin',    name:'Vladimir Putin',    emoji:'🐻', sector:'Politics', basePrice:16.00, volatility:0.060, buzzBase:44, buzzDecayRate:0.91 }, // ~100-300/wk
-  { id:'xi',            name:'Xi Jinping',        emoji:'🇨🇳', sector:'Politics', basePrice:15.00, volatility:0.055, buzzBase:38, buzzDecayRate:0.90 }, // ~50-150/wk
+  { id:'xi',            name:'Xi Jinping',        emoji:'🇨🇳', sector:'Politics', basePrice:15.00, volatility:0.055, buzzBase:48, buzzDecayRate:0.90 }, // ~50-150/wk
+  { id:'spencerpratt',  name:'Spencer Pratt',     emoji:'cal',sector:'Politics', basePrice:15.00, volatility:0.055, buzzBase:48, buzzDecayRate:0.90 }, // ~50-150/wk
 
   // ROYALS
   { id:'princewilliam', name:'Prince William',    emoji:'🎩', sector:'Royals',   basePrice:18.00, volatility:0.020, buzzBase:38, buzzDecayRate:0.89 }, // ~100-200/wk
